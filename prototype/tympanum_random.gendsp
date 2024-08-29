@@ -1,0 +1,78 @@
+{
+	"patcher" : 	{
+		"fileversion" : 1,
+		"appversion" : 		{
+			"major" : 8,
+			"minor" : 6,
+			"revision" : 2,
+			"architecture" : "x64",
+			"modernui" : 1
+		}
+,
+		"classnamespace" : "dsp.gen",
+		"rect" : [ 35.0, 85.0, 890.0, 1033.0 ],
+		"bglocked" : 0,
+		"openinpresentation" : 0,
+		"default_fontsize" : 12.0,
+		"default_fontface" : 0,
+		"default_fontname" : "Arial",
+		"gridonopen" : 1,
+		"gridsize" : [ 15.0, 15.0 ],
+		"gridsnaponopen" : 1,
+		"objectsnaponopen" : 1,
+		"statusbarvisible" : 2,
+		"toolbarvisible" : 1,
+		"lefttoolbarpinned" : 0,
+		"toptoolbarpinned" : 0,
+		"righttoolbarpinned" : 0,
+		"bottomtoolbarpinned" : 0,
+		"toolbars_unpinned_last_save" : 0,
+		"tallnewobj" : 0,
+		"boxanimatetime" : 200,
+		"enablehscroll" : 1,
+		"enablevscroll" : 1,
+		"devicewidth" : 0.0,
+		"description" : "",
+		"digest" : "",
+		"tags" : "",
+		"style" : "",
+		"subpatcher_template" : "",
+		"assistshowspatchername" : 0,
+		"boxes" : [ 			{
+				"box" : 				{
+					"code" : "//generate single-sample impulses at a specified bps.\r\n//route the impulses in a round-robin fashion, so multiple clicks can play at a time\r\n\r\n//find click frequency\r\nParam bps(0);\r\nDelay myDelay(44100); // 1 second delay buffer\r\nclickRate = mstosamps(bps / 45); //DONT CHANGE. It should really be 1000 / bps but bps/45 works.\r\n\r\n\r\n//generate an impulse by clipping out everything but the top of a saw wave\r\nsawWave = phasor(clickRate, 0);\r\nwrap_6 = wrap(sawWave, 0., 1.);\r\nimpulseWave = delta(wrap_6);\r\n\r\n//introduce randomness in timing only when bps < 30\r\nrandomDelay = (bps < 60) ? noise() * 0.2 : 0; // Adjust the multiplier to control the randomness range\r\n\r\nmyDelay.write(impulseWave);\r\ndelayedImpulse = myDelay.read(randomDelay);\r\n\r\n//route each impulse to the channels in a round-robin fashion\r\ncounter = counter((impulseWave < 0), 0, mc_channelcount);\r\n\r\n\t\r\n\r\n//if there is an impulse, and the channel is correct, output 1, else 0\r\nout1 = (delayedImpulse < 0) * (counter + 1 == mc_channel);",
+					"fontface" : 0,
+					"fontname" : "<Monospaced>",
+					"fontsize" : 12.0,
+					"id" : "obj-5",
+					"maxclass" : "codebox",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 11.0, 7.0, 862.0, 889.0 ]
+				}
+
+			}
+, 			{
+				"box" : 				{
+					"id" : "obj-4",
+					"maxclass" : "newobj",
+					"numinlets" : 1,
+					"numoutlets" : 0,
+					"patching_rect" : [ 11.0, 963.0, 35.0, 22.0 ],
+					"text" : "out 1"
+				}
+
+			}
+ ],
+		"lines" : [ 			{
+				"patchline" : 				{
+					"destination" : [ "obj-4", 0 ],
+					"source" : [ "obj-5", 0 ]
+				}
+
+			}
+ ]
+	}
+
+}

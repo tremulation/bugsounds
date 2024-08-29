@@ -1,0 +1,60 @@
+{
+	"patcher" : 	{
+		"fileversion" : 1,
+		"appversion" : 		{
+			"major" : 8,
+			"minor" : 6,
+			"revision" : 2,
+			"architecture" : "x64",
+			"modernui" : 1
+		}
+,
+		"classnamespace" : "dsp.gen",
+		"rect" : [ 72.0, 106.0, 1852.0, 1049.0 ],
+		"bglocked" : 0,
+		"openinpresentation" : 0,
+		"default_fontsize" : 12.0,
+		"default_fontface" : 0,
+		"default_fontname" : "Arial",
+		"gridonopen" : 1,
+		"gridsize" : [ 15.0, 15.0 ],
+		"gridsnaponopen" : 1,
+		"objectsnaponopen" : 1,
+		"statusbarvisible" : 2,
+		"toolbarvisible" : 1,
+		"lefttoolbarpinned" : 0,
+		"toptoolbarpinned" : 0,
+		"righttoolbarpinned" : 0,
+		"bottomtoolbarpinned" : 0,
+		"toolbars_unpinned_last_save" : 0,
+		"tallnewobj" : 0,
+		"boxanimatetime" : 200,
+		"enablehscroll" : 1,
+		"enablevscroll" : 1,
+		"devicewidth" : 0.0,
+		"description" : "",
+		"digest" : "",
+		"tags" : "",
+		"style" : "",
+		"subpatcher_template" : "",
+		"assistshowspatchername" : 0,
+		"boxes" : [ 			{
+				"box" : 				{
+					"code" : "//this version of the tymbal sound has no overlap,\r\n//skew adjusts both start and end time instead of just start time\r\n\r\n// click buffer stores the pregenerated click\r\nBuffer click(\"singleClick\");\r\n// wind buffer stores the amplitude envelope for each subclick\nBuffer wind(\"window\");\nParam skew(0, min=0.1, default=1);\nParam volume(1, min=0.1, default=1);\nParam freq1(4370);\nParam amp1(1);\nParam freq2(4190);\nParam amp2(1);\nParam freq3(3920);\nParam amp3(.83);\nParam freq4(3170);\nParam amp4(.39);\nParam freq5(6540);\nParam amp5(.34);\r\nParam attackRatio(.1, min =.01, default=.1);        \nlen = dim(click);\r\n\r\n\r\n// --------------------- amplitude envelope generation  --------------------- \\\\\r\n//the window buffer stores the amplitude envelope that each click uses\r\n  \nwindowlen = dim(wind);\nattackSamples = int(windowlen * attackRatio);\ndecaySamples = windowlen - attackSamples;\n\n// iterate through every sample in the buffer\nfor (i = 0; i < windowlen; i += 1) {\r\n\tvalue = 0;\n    if (i < attackSamples) {\n        // Linear attack\n        value = i / (attackSamples - 1);\n    } else {\n        // Linear decay\n        value = 1 - ((i - attackSamples) / (decaySamples - 1));\n    }\n    poke(wind, value, i);\n}\n\n\n// --------------------------- sample generation  --------------------------- \\\\\n// zero out sample buffer\nfor(j = 0; j < len; j += 1) {\n    poke(click, 0, j);\n}\r\n\n// loop through each sample of the buffer and set it\nfor(i = 0; i < len; i += 1) {\n    subclickLen = len / 5;\n    acc = 0;\n    \r\n\t//loop through each of the clicks \n    for(k = 0; k < 5; k+= 1) {\n        clickStart = subclickLen * k * skew;\n        clickEnd = clickStart + subclickLen * skew;\n        \n        if(clickEnd > len){\n            clickEnd = len;\n        }\n        \n        // check if the current sample is within this click's range\n        if(i >= clickStart && i < clickEnd){\n            pos = (i - clickStart) / (clickEnd - clickStart);  // 0 to 1, represents the progress in the current click\n            envelope = peek(wind, pos, index=\"phase\", boundmode=\"wrap\", channels=1);\n            time = i / SAMPLERATE;\n            \n            clickValue = 0;\n            if(k == 0){\n                phase = sin(2 * pi * freq1 * time);\n                clickValue = envelope * phase * amp1;\n            } else if (k == 1){\n                phase = sin(2 * pi * freq2 * time);\n                clickValue = envelope * phase * amp2;\n            } else if (k == 2){\n                phase = sin(2 * pi * freq3 * time);\n                clickValue = envelope * phase * amp3;\n            } else if (k == 3){\n                phase = sin(2 * pi * freq4 * time);\n                clickValue = envelope * phase * amp4;\n            } else {\n                phase = sin(2 * pi * freq5 * time);\n                clickValue = envelope * phase * amp5;\n            }\n            \n            acc = clickValue;\n            break;  // Exit the loop since only one click rus at a time\n        }\n    }\n    \n    value = acc * volume;\n    poke(click, value, i);\n}\nout = 1;",
+					"fontface" : 0,
+					"fontname" : "<Monospaced>",
+					"fontsize" : 12.0,
+					"id" : "obj-13",
+					"maxclass" : "codebox",
+					"numinlets" : 1,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ -3.0, -2.0, 870.0, 945.0 ]
+				}
+
+			}
+ ],
+		"lines" : [  ]
+	}
+
+}
