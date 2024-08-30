@@ -10,14 +10,14 @@
 using namespace std;
 
 
-struct songElement {
+struct SongElement {
     enum class Type {
         Note,
-        PatternChange
+        Pattern
     };
-    
+
     Type type;
-    
+
     // For notes
     float startFrequency;
     float endFrequency;
@@ -25,7 +25,65 @@ struct songElement {
 
     // For patterns
     std::vector<uint8_t> beatPattern;
+
+    SongElement(float start, float end, float dur)
+        : type(Type::Note), startFrequency(start), endFrequency(end), duration(dur) {}
+
+    SongElement(const std::vector<uint8_t>& pattern)
+        : type(Type::Pattern), beatPattern(pattern) {}
 };
+
+
+void printSongElements(const std::vector<SongElement>& songElements) {
+    for (size_t i = 0; i < songElements.size(); ++i) {
+        const auto& element = songElements[i];
+        std::cout << "Element " << i << ": ";
+        
+        if (element.type == SongElement::Type::Note) {
+            std::cout << "Note - Start Freq: " << element.startFrequency 
+                      << " Hz, End Freq: " << element.endFrequency 
+                      << " Hz, Duration: " << element.duration << " ms\n";
+        } else if (element.type == SongElement::Type::Pattern) {
+            std::cout << "Pattern - Beats: ";
+            for (const auto& beat : element.beatPattern) {
+                std::cout << static_cast<int>(beat) << " ";
+            }
+            std::cout << "\n";
+        }
+    }
+}
+
+
+std::vector<SongElement> parseTokens(const std::vector<std::string>& tokens) {
+    std::vector<SongElement> songElements;
+    float lastFrequency = 0.0f;
+
+    for (const auto& token : tokens) {
+        if (token.substr(0, 7) == "pattern") {
+            // Parse pattern
+            std::vector<uint8_t> pattern;
+            std::istringstream iss(token.substr(8, token.length() - 9)); // Remove "pattern(" and ")"
+            std::string num;
+            while (std::getline(iss, num, ' ')) {
+                pattern.push_back(static_cast<uint8_t>(std::stoi(num)));
+            }
+            songElements.emplace_back(pattern);
+        } else {
+            // Parse note
+            std::istringstream iss(token);
+            float endFreq, duration;
+            if (!(iss >> endFreq >> duration)) {
+                throw std::runtime_error("Invalid note format: " + token);
+            }
+            songElements.emplace_back(lastFrequency, endFreq, duration);
+            lastFrequency = endFreq;
+        }
+    }
+
+    return songElements;
+}
+
+
 
 // Helper function to trim leading and trailing whitespace
 string trim(const string& str) {
@@ -373,7 +431,10 @@ int main()
         getline(cin, songInput);
     
         vector<string> tokens = tokenize(songInput);
-    
+        vector<SongElement> parsedSong = parseTokens(tokens);
+        
+        printSongElements(parsedSong);
+        
         if (!tokens.empty()) {
             cout << "TOKENIZED:\n";
             for (size_t i = 0; i < tokens.size(); ++i) {
