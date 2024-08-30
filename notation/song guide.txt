@@ -15,7 +15,7 @@ The velocity of the note is used to amplify/quiet the note.
 
 **Pair:** Two numbers back to back, with a comma after the second number.
 The first number specifies the target frequency (Hz), and the second specifies
-the duration (ms).
+the time it will take to reach that frequency (ms).
 	Example: 120 1, 120 1000, 0 500,
 	AKA start at 120 hz, remain there for 1 second, and then die off to 0 hz in
 	0.5 seconds.
@@ -81,7 +81,7 @@ here. rand(1 5)
 	7: rand(240 250) 500
 	8: 0 500	
 	
-TOKENIZE FIFTH PASS, resolve rands
+TOKENIZE THIRD PASS, resolve rands
 	0: 120 1
 	1: 120.1 599.6			
 	2: pattern(1 2.4 0 0)
@@ -92,33 +92,9 @@ TOKENIZE FIFTH PASS, resolve rands
 	7: 241.1 500
 	8: 0 500
 
-Now that we a list of notes and patterns, we can turn them into an array of C++ structs that will be passed to the synth to be played.
+Now that we a list of notes and patterns, we can turn them into a list that can be passed to the synthesizer.
+At this point, the code is just note(frequency, time) pairs, and pattern(a b c ...) blocks, where a, b, and c 
+are all integers. What would be an efficient way to pass them to the synth, that would also be easy to parse?
 
-enum class EventType
-{
-	Note,
-	PatternChange
-};
-
-struct BugSongEvent
-{
-	EventType type;
-	
-	//for notes 
-	float startFreq;
-	float endFreq;
-	float duration;	//ms
-	
-	//for pattern changes
-	std::array<int, 50> beatPattern;
-	int patternLength;
-	
-	//constructors for both
-	BugSongEvent(float frequency, float endFrequency, float duration):
-		type(EventType::Note), startFreq(frequency), endFreq(endFrequency), dur(duration), patternLength(0) {}
-	
-	//this way might be bad if pattern is on the stack but IDK. c++ evil language.
-	BugSongEvent(const std::array<int, 50>& pattern, int length) 
-        : type(EventType::PatternChange), frequency(0), duration(0), 
-          beatPattern(pattern), patternLength(length) {}
-};
+Some extra things that would be useful for the synth to have precomputed are the starting frequency, for notes.
+Write a struct or object or something that accomplishes this.

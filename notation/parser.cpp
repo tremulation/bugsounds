@@ -5,9 +5,27 @@
 #include <regex>
 #include <random>
 #include <cmath>
+#include <cstdint>
 
 using namespace std;
 
+
+struct songElement {
+    enum class Type {
+        Note,
+        PatternChange
+    };
+    
+    Type type;
+    
+    // For notes
+    float startFrequency;
+    float endFrequency;
+    float duration;
+
+    // For patterns
+    std::vector<uint8_t> beatPattern;
+};
 
 // Helper function to trim leading and trailing whitespace
 string trim(const string& str) {
