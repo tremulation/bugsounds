@@ -43,31 +43,32 @@ vector<string> tokenizeByBrackets(const string& str) {
 
 // Helper function to resolve rand(min, max)
 int resolveRand(const std::string& randToken) {
-    //extract the two numbers from the rand statement
-    size_t randStart = randToken.find("rand(");
-    size_t randEnd = randToken.find(")");
-    if (randStart == std::string::npos || randEnd == std::string::npos) {
-        throw std::invalid_argument("Invalid rand() format");
+    // Check if the string starts with "rand(" and ends with ")"
+    if (randToken.substr(0, 5) != "rand(" || randToken.back() != ')') {
+        throw std::invalid_argument("Invalid rand() format: " + randToken);
     }
 
-    std::string range = randToken.substr(randStart + 5, randEnd - randStart - 5);
-    size_t separator = range.find(' ');
+    // Extract the range string
+    std::string range = randToken.substr(5, randToken.length() - 6);
 
-    if (separator == std::string::npos) {
-        throw std::invalid_argument("Invalid rand() format");
+    // Use stringstream to parse the two numbers
+    std::istringstream iss(range);
+    int min, max;
+    if (!(iss >> min >> max)) {
+        throw std::invalid_argument("Invalid rand() format: unable to parse numbers");
     }
 
-    float min = std::stoi(range.substr(0, separator));
-    float max = std::stoi(range.substr(separator + 1));
-    
-    static std::mt19937 gen(std::time(0));
-    static std::uniform_real_distribution<> dis(0.0, 1.0);
+    // Check if min is less than or equal to max
+    if (min > max) {
+        throw std::invalid_argument("Invalid range: min must be less than or equal to max");
+    }
 
-    // Generate a random float between 0 and 1
-    double randomFloat = dis(gen);
+    // Use static variables for the random number generator to avoid reinitializing every call
+    static std::mt19937 gen(std::time(nullptr));
+    static std::uniform_int_distribution<> dis(0, std::numeric_limits<int>::max());
 
-    // Scale and translate to the desired range
-    return min + static_cast<int>(randomFloat * (max - min + 1));
+    // Generate a random number within the range
+    return min + dis(gen) % (max - min + 1);
 }
 
 void recursiveSplitClosedBrackets(const std::string& str, std::vector<std::string>& tokens) {
@@ -120,35 +121,6 @@ std::vector<std::string> firstPassTokenize(const std::string& song) {
         }
         tokens.push_back(token);
     }
-
-    // Further tokenization: move brackets and loop times to their own lines
-    // std::vector<std::string> tokens2;
-    // for (const std::string& str : tokens) {
-    //     int numClosedBrackets = 0;
-    //     int numOpenBrackets = 0;
-    //     for (char c : str) {
-    //         if (c == '[') numOpenBrackets++;
-    //         if (c == ']') numClosedBrackets++;
-    //     }
-    //     cout << "Closed bracckets: " << numClosedBrackets << endl;
-    //     cout << "Open Brackets: " << numOpenBrackets << endl;
-    //     if ((numClosedBrackets == 0) && (numOpenBrackets == 0)) {
-    //         tokens2.push_back(str);
-    //     } else if (numOpenBrackets == 1) {
-    //         // Handle open brackets: move them to their own line
-    //         size_t openBracketPos = str.find('[');
-    //         if (openBracketPos != 0) {
-    //             std::cerr << "Error: Mismatched brackets in the input song notation.\n";
-    //             return {}; // Return an empty vector to indicate failure
-    //         }
-    //         tokens2.push_back("[");
-    //         tokens2.push_back(str.substr(1, std::string::npos));
-    //     } else if (numClosedBrackets > 0) {
-    //         // Handle multiple closing brackets using recursion
-    //         cout << str << endl;
-    //         recursiveSplitClosedBrackets(str, tokens2);
-    //     }
-    // }
     
     std::vector<std::string> tokens2;
     for (const std::string& str : tokens) {
@@ -321,14 +293,57 @@ vector<string> secondPassTokenize(const vector<string>& tokens) {
     return tempTokens;
 }
 
+//The tokens are now all of the form 
+// number number
+// number rand(a b)
+// rand(a b) number
+// rand(a b) rand(b c)
+// pattern( ... )
+
+vector<string> thirdPassTokenize(const vector<string>& tokens)
+{
+    vector<string> tokens2;
+    //loop through each token, resolve the randoms it contains.
+    //each token can have an indeterminate amount of rands, since pattern can have many
+    for(int i = 0; i < tokens.size(); i++){
+        string str = tokens[i];
+                
+        //iteratively resolve all rands in this token
+        string::size_type pos = 0;
+
+        if((pos = str.find("rand", pos)) != string::npos){
+            //at least one rand found. Iterate through string and resolve it and any others  
+            while ((pos = str.find("rand", pos)) != string::npos) {
+                int endPos = str.find(")", pos);
+                
+                //extract and resolve the rand
+                string extractedRand = str.substr(pos, endPos + 1 - pos);
+                int resolvedValue =  resolveRand(str.substr(pos, endPos + 1 - pos));
+                
+                //update the string and move the pos past the value we finished
+                string resolvedValueString = to_string(resolvedValue);
+                str = str.substr(0, pos) + resolvedValueString + str.substr(endPos + 1, string::npos);
+                pos = pos + resolvedValueString.length(); // Move past the new text
+            }
+            tokens2.push_back(str);
+        } else {
+            //no rand found
+            tokens2.push_back(str);
+        }
+    }
+    return tokens2;
+}
+
 
 vector<string> tokenize(const string& song) 
 {   
     vector<string> firstPassTokens = firstPassTokenize(song);
     if (firstPassTokens.empty()) return {};  // Error handling: Return an empty song on error
     vector<string> secondPassTokens = secondPassTokenize(firstPassTokens);
-
-    return secondPassTokens; 
+    if(secondPassTokens.empty()) return {};
+    vector<string> thirdPassTokens = thirdPassTokenize(secondPassTokens);
+    if(thirdPassTokens.empty()) return {};
+    return thirdPassTokens; 
 }
 
 int main() 
