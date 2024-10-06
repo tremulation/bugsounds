@@ -1,3 +1,15 @@
+/*
+  ==============================================================================
+
+    songCodeCompiler.cpp
+    Created: 5 Oct 2024 10:01:56pm
+    Author:  Taro
+
+  ==============================================================================
+*/
+
+#include "songCodeCompiler.h"
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -8,30 +20,6 @@
 #include <cstdint>
 
 using namespace std;
-
-
-struct SongElement {
-    enum class Type {
-        Note,
-        Pattern
-    };
-
-    Type type;
-
-    // For notes
-    float startFrequency;
-    float endFrequency;
-    float duration;
-
-    // For patterns
-    std::vector<uint8_t> beatPattern;
-
-    SongElement(float start, float end, float dur)
-        : type(Type::Note), startFrequency(start), endFrequency(end), duration(dur) {}
-
-    SongElement(const std::vector<uint8_t>& pattern)
-        : type(Type::Pattern), beatPattern(pattern) {}
-};
 
 
 void printSongElements(const std::vector<SongElement>& songElements) {
@@ -422,25 +410,12 @@ vector<string> tokenize(const string& song)
     return thirdPassTokens; 
 }
 
-int main() 
-{
-    string songInput;
-    
-    while(false != true) {
-        cout << "Enter the notation: ";
-        getline(cin, songInput);
-    
-        vector<string> tokens = tokenize(songInput);
-        vector<SongElement> parsedSong = parseTokens(tokens);
-        
-        printSongElements(parsedSong);
-        
-        if (!tokens.empty()) {
-            cout << "TOKENIZED:\n";
-            for (size_t i = 0; i < tokens.size(); ++i) {
-                cout << i << ": " << tokens[i] << '\n';
-            }
-        }
+
+std::vector<SongElement> compileSongcode(const std::string& songcode) {
+    std::vector<std::string> tokens = tokenize(songcode);
+    if (tokens.empty()) {
+        // Handle error: return an empty vector or throw an exception
+        return {};
     }
-    return 0;
+    return parseTokens(tokens);
 }
