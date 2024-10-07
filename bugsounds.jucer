@@ -4,6 +4,10 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" compilerFlagSchemes="">
   <MAINGROUP id="j5AzTJ" name="bugsounds">
     <GROUP id="{E3507E12-ACF5-B5C3-72F5-EFA529559E89}" name="Source">
+      <FILE id="Pb3Jnm" name="songcodeEditor.cpp" compile="1" resource="0"
+            file="Source/songcodeEditor.cpp"/>
+      <FILE id="WtkfQr" name="songcodeEditor.h" compile="0" resource="0"
+            file="Source/songcodeEditor.h"/>
       <FILE id="zi5R3v" name="SongCodeCompiler.h" compile="0" resource="0"
             file="Source/SongCodeCompiler.h"/>
       <FILE id="cZVMLX" name="SongCodeCompiler.cpp" compile="1" resource="0"

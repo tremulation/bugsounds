@@ -20,20 +20,29 @@ the time it will take to reach that frequency (ms).
 	AKA start at 120 hz, remain there for 1 second, and then die off to 0 hz in
 	0.5 seconds.
 	
-**Loop**: any number of other components, surrounded by "[]" and then with a
+**Loop**: any number of other components, surrounded by "[]" and then a
  length at the end, specifying the number of repetitions. This is basically a
  hack for sticking an LFO into an ADSR envelope.
 	Example: 120 1, [120 500, 240 500] 2, 0 500
 	AKA start at 120 hz, then interpolate between 120 and 500 hz two times, each time
 	taking half a second to go between each time. Then die off in half a second.
 	- if the loop iterations isn't a whole number, it gets rounded down.
-	- if its >= 0, it gets changed to 1
+	- if its <= 0, it gets changed to 1
 	
 **Randomize**: Any number from the previous components can be replaced with a 
 rand(min, max) which will generate a random float number between the range.
 	- works on both numbers in a pair (freq, length), as well as loop
 	  iterations, where it will be rounded down
 	Example: 120 1, [rand(120 130) 500, rand(240 250) 500] 2, 0 500
+	
+**Linked Random (lrand)**: Random numbers linked with a character. If two lrands have
+the same linking character, they will have the same value. The way this works is the
+first time an lrand is computed, it's value is then stored and mapped to the character.
+When another lrand is encountered and it has that same character, the second lrands
+value will be set to the first value. 
+	- Example: lrand(a 140 150) 500, lrand(a) 1000 
+     evals to: 144 500, 144 1000
+	- you can use an lrand with just a character after the value has already been mapped
 
 **Change Beat Pattern:** Can be used to express different note patterns. Spaces
 demarcate beats, the number of sub-beats per beat is expressed as a number from
@@ -81,7 +90,7 @@ here. rand(1 5)
 	7: rand(240 250) 500
 	8: 0 500	
 	
-TOKENIZE THIRD PASS, resolve rands
+TOKENIZE THIRD PASS, resolve the rands from inside of the loop
 	0: 120 1
 	1: 120.1 599.6			
 	2: pattern(1 2.4 0 0)
@@ -91,10 +100,3 @@ TOKENIZE THIRD PASS, resolve rands
 	6: 126.1 500
 	7: 241.1 500
 	8: 0 500
-
-Now that we a list of notes and patterns, we can turn them into a list that can be passed to the synthesizer.
-At this point, the code is just note(frequency, time) pairs, and pattern(a b c ...) blocks, where a, b, and c 
-are all integers. What would be an efficient way to pass them to the synth, that would also be easy to parse?
-
-Some extra things that would be useful for the synth to have precomputed are the starting frequency, for notes.
-Write a struct or object or something that accomplishes this.

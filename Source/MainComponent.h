@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "songcodeEditor.h"
 
 //==============================================================================
 /*
@@ -26,7 +27,7 @@ public:
 private:
     //==============================================================================
     // Your private member variables go here...
-    juce::TextEditor songcodeEditor;
+    SongcodeEditor frequencyEditor;
     juce::TextButton echoButton;
 
     void echoToConsole();

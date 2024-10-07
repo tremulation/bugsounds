@@ -22,27 +22,7 @@
 using namespace std;
 
 
-void printSongElements(const std::vector<SongElement>& songElements) {
-    for (size_t i = 0; i < songElements.size(); ++i) {
-        const auto& element = songElements[i];
-        std::cout << "Element " << i << ": ";
-        
-        if (element.type == SongElement::Type::Note) {
-            std::cout << "Note - Start Freq: " << element.startFrequency 
-                      << " Hz, End Freq: " << element.endFrequency 
-                      << " Hz, Duration: " << element.duration << " ms\n";
-        } else if (element.type == SongElement::Type::Pattern) {
-            std::cout << "Pattern - Beats: ";
-            for (const auto& beat : element.beatPattern) {
-                std::cout << static_cast<int>(beat) << " ";
-            }
-            std::cout << "\n";
-        }
-    }
-}
-
-
-std::vector<SongElement> parseTokens(const std::vector<std::string>& tokens) {
+std::vector<SongElement> parseTokens(const std::vector<std::string>& tokens, std::string* errorMsg) {
     std::vector<SongElement> songElements;
     float lastFrequency = 0.0f;
 
@@ -61,7 +41,8 @@ std::vector<SongElement> parseTokens(const std::vector<std::string>& tokens) {
             std::istringstream iss(token);
             float endFreq, duration;
             if (!(iss >> endFreq >> duration)) {
-                throw std::runtime_error("Invalid note format: " + token);
+                *errorMsg = "Invalid note format: " + token;
+                return {};
             }
             songElements.emplace_back(lastFrequency, endFreq, duration);
             lastFrequency = endFreq;
@@ -105,6 +86,8 @@ vector<string> tokenizeByBrackets(const string& str) {
     return tokens;
 }
 
+
+
 // Helper function to resolve rand(min, max)
 int resolveRand(const std::string& randToken) {
     // Check if the string starts with "rand(" and ends with ")"
@@ -135,6 +118,56 @@ int resolveRand(const std::string& randToken) {
     return min + dis(gen) % (max - min + 1);
 }
 
+
+int resolveLinkedRand(const std::string &lrandToken, std::map<char, int>& linkedRandValues) {
+    //check that it is an lrand
+    if (lrandToken.substr(0, 6) != "lrand(" || lrandToken.back() != ')') {
+        throw std::invalid_argument("Invalid lrand() format: " + lrandToken);
+    }
+
+    //extract linking character
+    std::string content = lrandToken.substr(6, lrandToken.length() - 7);
+    char linkingCharacter = content[0];
+
+    //shorthand?
+    if (content.length() == 1) {
+        if (linkedRandValues.find(linkingCharacter) == linkedRandValues.end()) {
+            throw std::invalid_argument("Error: lrand short-form used before a value was set for character: " + content);
+        }
+        else {
+            return linkedRandValues[linkingCharacter];
+        }
+    }
+
+    
+
+    //ok its all fine extract ranges and compute
+    std::istringstream iss(content.substr(2)); // Skip the link character and space
+    int min, max;
+    if (!(iss >> min >> max)) {
+        throw std::invalid_argument("Error: Invalid lrand() format: unable to parse range");
+    }
+    if (min > max) {
+        throw std::invalid_argument("Error: Invalid range: min must be less than or equal to max");
+    }
+
+    //longhand. fail if this val is already in the map
+    if (linkedRandValues.find(linkingCharacter) != linkedRandValues.end()) {
+        throw std::invalid_argument("Error: the value for " + content.substr(0, 1) + " is already set. use the shorthand lrand(" + content.substr(0, 1) + ")");
+    }
+
+    // Generate a new random value
+    static std::mt19937 gen(std::time(nullptr));
+    static std::uniform_int_distribution<> dis(0, std::numeric_limits<int>::max());
+    int randomValue = min + dis(gen) % (max - min + 1);
+
+    // Store the new value in the map
+    linkedRandValues[linkingCharacter] = randomValue;
+
+    return randomValue;
+}
+
+
 void recursiveSplitClosedBrackets(const std::string& str, std::vector<std::string>& tokens) {
     size_t end = str.find(']');
     
@@ -163,7 +196,7 @@ void recursiveSplitClosedBrackets(const std::string& str, std::vector<std::strin
 #include <sstream>
 #include <regex>
 
-std::vector<std::string> firstPassTokenize(const std::string& song) {
+std::vector<std::string> firstPassTokenize(const std::string& song, std::string* errorMsg) {
     if (song.length() == 0) {
         return {};
     }
@@ -180,7 +213,7 @@ std::vector<std::string> firstPassTokenize(const std::string& song) {
 
         // Check for empty tokens
         if (token.empty()) {
-            std::cerr << "Error: Empty token found between commas.\n";
+            *errorMsg = "Error: Empty token found.";
             return {}; // Return an empty vector to indicate failure
         }
         tokens.push_back(token);
@@ -214,7 +247,10 @@ std::vector<std::string> firstPassTokenize(const std::string& song) {
     const std::string justNumber = R"(\d+)";
     const std::string justRand = R"(rand\(\d+ \d+\))";
     const std::string patternBlock = R"(pattern\((?:\d+|rand\(\d+ \d+\))(?: (?:\d+|rand\(\d+ \d+\)))*\))";
-
+    const std::string justLrand = R"(lrand\(([a-z]( \d+ \d+)?)\))";
+    const std::string lrandLrand = R"((lrand\(([a-z]( \d+ \d+)?)\) lrand\(([a-z]( \d+ \d+)?)\)))";
+    const std::string lrandNumber = R"((lrand\(([a-z]( \d+ \d+)?)\) \d+))";
+    const std::string numberLrand = R"((\d+ lrand\(([a-z]( \d+ \d+)?)\)))";
     // Unified regex pattern
     const std::regex pattern("^(" + brackets + "|" +
                                     numberNumber + "|" +
@@ -223,46 +259,42 @@ std::vector<std::string> firstPassTokenize(const std::string& song) {
                                     randNumber + "|" +
                                     justNumber + "|" +
                                     justRand + "|" +
-                                    patternBlock + ")$");
+                                    justLrand + "|" +
+                                    lrandLrand + "|" +
+                                    patternBlock + "|" +
+                                    lrandNumber + "|" +
+                                    numberLrand + ")$");
 
     for (const auto& t : tokens2) {
         if (!std::regex_match(t, pattern)) {
-            // Replace this with something that draws an error message on the UI of the synth later
-            std::cerr << "Error: Malformed song component - " << t << std::endl;
+            *errorMsg = "Error: Malformed song component - " + t ;
             return {};
         }
     }
 
     std::vector<std::string> tokens3;
-    // Resolve the rands in the loop times. Check that all loops have a number of iterations
+    // Check that all loops have a number of iterations
     for (int i = 0; i < tokens2.size(); i++) {
         const std::string& str = tokens2.at(i);
 
         if (str == "]") {
             // Check there is an iteration count following the closed bracket
             if (i + 1 == tokens2.size()) {
-                std::cerr << "Error: A loop is missing its iteration count. [ ... ] x <--\n";
+                *errorMsg = "Error: A loop is missing its iteration count. [ ... ] x <--";
                 return {};
             }
 
             const std::string& str2 = tokens2.at(i + 1);
-            // Valid length elements are justNumber, or justRand
-            const std::regex loopIterationPattern("^(" + justNumber + "|" + justRand + ")$");
+            // Valid length elements are justNumber, just rand, or just linked rand
+            const std::regex loopIterationPattern("^(" + justNumber + "|" + justRand + "|" + justLrand + ")$");
             if (!std::regex_match(str2, loopIterationPattern)) {
-                std::cerr << "Error: A loop has a malformed iteration count. [ ... ] x <-- You have: " << str2 << ". It must be either a number or a rand(x)." << std::endl;
+                *errorMsg = "Error: A loop has a malformed iteration count. [ ... ] x <-- You have: " + str2 + ". It must be either a number, rand(min max), or lrand(c min max).";
                 return {};
             }
-            // Loop iteration is valid, handle the two cases
-            const std::regex justNumberPattern("^(" + justNumber + ")$");
-            if (std::regex_match(str2, justNumberPattern)) {
-                tokens3.push_back("]");
-                tokens3.push_back(str2);
-                i++;
-            } else {
-                tokens3.push_back("]");
-                tokens3.push_back(str2);
-                i++;
-            }
+            // Loop iteration is valid
+            tokens3.push_back("]");
+            tokens3.push_back(str2);
+            i++;
         } else {
             tokens3.push_back(str);
         }
@@ -272,11 +304,10 @@ std::vector<std::string> firstPassTokenize(const std::string& song) {
 }
 
 //expand all the loops iteratively. Work from the outer to the inner.
-vector<string> secondPassTokenize(const vector<string>& tokens) {
-    
+//evals the single lrands and rands for LOOPS ONLY
+vector<string> secondPassTokenize(const vector<string>& tokens, std::string* errorMsg, std::map<char, int>& linkedRandValues) {
     vector<string> tempTokens(tokens);
 
-    
     while(true){
         //check to see if there are loops remaining.
         int numLoops = 0;
@@ -304,118 +335,182 @@ vector<string> secondPassTokenize(const vector<string>& tokens) {
         }
         
         //find the loop end point that matches with the start point
-        int innerBracketCounter = 1;
-        for(int i = loopStartInd + 1; i < tempTokens.size(); i++){
-            auto curTok = tempTokens[i];
-            if(curTok == "[") innerBracketCounter++;
-            if(curTok == "]") innerBracketCounter--;
-            
-            if(innerBracketCounter == 0){
-                loopEndInd = i;
-                break;
-            }
+    int innerBracketCounter = 1;
+    for (int i = loopStartInd + 1; i < tempTokens.size(); i++) {
+        auto curTok = tempTokens[i];
+        if (curTok == "[") innerBracketCounter++;
+        if (curTok == "]") innerBracketCounter--;
+
+        if (innerBracketCounter == 0) {
+            loopEndInd = i;
+            break;
         }
-        
-        //find number of iterations for this loop
-        //resolve rands to a number if there is one
-        const std::string justNumber = R"(\d+)";
-        const std::regex justNumberPattern("^(" + justNumber + ")$");
-        auto loopIterationToken = tempTokens[loopEndInd + 1];
+    }
+
+    //find number of iterations for this loop
+    //resolve rands to a number if there is one
+    const std::string justNumber = R"(\d+)";
+    const std::string justRand = R"(rand\(\d+ \d+\))";
+
+    const std::regex justNumberPattern("^(\d+)$");
+    const std::regex justRandPattern("^(rand\(\d+ \d+\))$");
+
+    auto loopIterationToken = tempTokens[loopEndInd + 1];
+    //just a number, rand, and lrand respectively. 
+    //catch errors from each resolve rand function
+    try {
         if (regex_match(loopIterationToken, justNumberPattern)) {
             loopIterationCount = stoi(loopIterationToken);
-        } else {
-            try {
-                loopIterationCount = resolveRand(loopIterationToken);
-            } catch (const std::invalid_argument& e) {
-                std::cerr << "Error: a rand isn't in the correct format: rand(min max)" << std::endl;
-                return {};
-            }
         }
-        
-        //copy everything before the loop starts into the return vector
-        vector<string> rvector;
-        for(int i = 0; i < loopStartInd; i++){
-            rvector.push_back(tempTokens[i]);
+        else if (regex_match(loopIterationToken, justRandPattern)) {
+            loopIterationCount = resolveRand(loopIterationToken);
         }
-        
-        //copy over the iterations
-        for(int j = loopIterationCount; j > 0; j--){
-            for(int i = loopStartInd + 1; i < loopEndInd; i++){
-                rvector.push_back(tempTokens[i]);
-            }
+        else {
+            loopIterationCount = resolveLinkedRand(loopIterationToken, linkedRandValues);
+
         }
-        
-        //copy over the stuff after the loop
-        for(int i = loopEndInd + 2; i < tempTokens.size(); i++){
-            rvector.push_back(tempTokens[i]);
-        }
-        
-        tempTokens = rvector;
     }
-    
-    
+    catch (const std::exception& e) {
+        *errorMsg = e.what();
+        return{};
+    }
+
+    //copy everything before the loop starts into the return vector
+    vector<string> rvector;
+    for (int i = 0; i < loopStartInd; i++) {
+        rvector.push_back(tempTokens[i]);
+    }
+
+    //copy over the iterations
+    for (int j = loopIterationCount; j > 0; j--) {
+        for (int i = loopStartInd + 1; i < loopEndInd; i++) {
+            rvector.push_back(tempTokens[i]);
+        }
+    }
+
+    //copy over the stuff after the loop
+    for (int i = loopEndInd + 2; i < tempTokens.size(); i++) {
+        rvector.push_back(tempTokens[i]);
+    }
+
+    tempTokens = rvector;
+        }
+
+
     return tempTokens;
 }
 
-//The tokens are now all of the form 
+//The tokens are now all of the form :
 // number number
 // number rand(a b)
 // rand(a b) number
 // rand(a b) rand(b c)
 // pattern( ... )
 
-vector<string> thirdPassTokenize(const vector<string>& tokens)
+// NEW ONES:
+// lrand(a min max) number
+// number lrand(a min max)
+// lrand(a min max) lrand(a min max)
+
+
+
+
+
+vector<string> thirdPassTokenize(const vector<string>& tokens, std::string* errorMsg, std::map<char, int>& linkedRandValues)
 {
-    vector<string> tokens2;
-    //loop through each token, resolve the randoms it contains.
-    //each token can have an indeterminate amount of rands, since pattern can have many
-    for(int i = 0; i < tokens.size(); i++){
-        string str = tokens[i];
-                
-        //iteratively resolve all rands in this token
+    std::vector<std::string> resolvedTokens;
+
+    for (int i = 0; i < tokens.size(); i++) {
+        std::string str = tokens[i];
+
+        //resolve lrands, and then resolve rands
         string::size_type pos = 0;
 
-        if((pos = str.find("rand", pos)) != string::npos){
+        if ((pos = str.find("lrand", pos)) != string::npos) {
+            //at least one lrand found. Iterate through string, resolve it and any others
+            while ((pos = str.find("lrand", pos)) != string::npos) {
+                int endPos = str.find(")", pos);
+                std::string extractedLrand = str.substr(pos, endPos + 1 - pos);
+                int resolvedValue = -1;
+                //extract/resolve the lrand
+                try {
+                    resolvedValue = resolveLinkedRand(extractedLrand, linkedRandValues);
+                }
+                catch (std::exception& e) {
+                    *errorMsg = e.what();
+                    return{};
+                }
+
+                //update string
+                std::string resolvedValueString = to_string(resolvedValue);
+
+                str = str.substr(0, pos) + resolvedValueString + str.substr(endPos + 1, string::npos);
+                pos = pos + resolvedValueString.length(); // Move past the new text
+            }
+            resolvedTokens.push_back(str);
+        }
+        else if ((pos = str.find("rand", pos)) != string::npos) {
             //at least one rand found. Iterate through string and resolve it and any others  
             while ((pos = str.find("rand", pos)) != string::npos) {
                 int endPos = str.find(")", pos);
                 
                 //extract and resolve the rand
+                int resolvedValue = -1;
                 string extractedRand = str.substr(pos, endPos + 1 - pos);
-                int resolvedValue =  resolveRand(str.substr(pos, endPos + 1 - pos));
+                try {
+                    resolvedValue = resolveRand(str.substr(pos, endPos + 1 - pos));
+                }
+                catch (std::exception& e) {
+                    *errorMsg = e.what();
+                    return {};
+                }
                 
                 //update the string and move the pos past the value we finished
                 string resolvedValueString = to_string(resolvedValue);
                 str = str.substr(0, pos) + resolvedValueString + str.substr(endPos + 1, string::npos);
                 pos = pos + resolvedValueString.length(); // Move past the new text
             }
-            tokens2.push_back(str);
-        } else {
-            //no rand found
-            tokens2.push_back(str);
+            resolvedTokens.push_back(str);
+        }
+        else {
+            resolvedTokens.push_back(str);
         }
     }
-    return tokens2;
+    return resolvedTokens;
 }
 
 
-vector<string> tokenize(const string& song) 
+vector<string> tokenize(const string& song, std::string* errorMsg, std::map<char, int>& linkedRandValues)
 {   
-    vector<string> firstPassTokens = firstPassTokenize(song);
+    vector<string> firstPassTokens = firstPassTokenize(song, errorMsg);
     if (firstPassTokens.empty()) return {};  // Error handling: Return an empty song on error
-    vector<string> secondPassTokens = secondPassTokenize(firstPassTokens);
+    vector<string> secondPassTokens = secondPassTokenize(firstPassTokens, errorMsg, linkedRandValues);
     if(secondPassTokens.empty()) return {};
-    vector<string> thirdPassTokens = thirdPassTokenize(secondPassTokens);
+    vector<string> thirdPassTokens = thirdPassTokenize(secondPassTokens, errorMsg, linkedRandValues);
     if(thirdPassTokens.empty()) return {};
     return thirdPassTokens; 
 }
 
 
-std::vector<SongElement> compileSongcode(const std::string& songcode) {
-    std::vector<std::string> tokens = tokenize(songcode);
+std::vector<SongElement> compileSongcode(const std::string& songcode, std::string* errorMsg, std::map<char, int>& linkedRandValues, juce::Colour& statusColor) {
+    std::string tokenizeErrors; 
+    std::vector<std::string> tokens = tokenize(songcode, &tokenizeErrors, linkedRandValues);
     if (tokens.empty()) {
         // Handle error: return an empty vector or throw an exception
+        statusColor = juce::Colours::red;
+        *errorMsg = tokenizeErrors;
         return {};
     }
-    return parseTokens(tokens);
+    *errorMsg = "Successfully compiled.";
+    statusColor = juce::Colours::green;
+
+    //now the song has been tokenized and the loops and rands have been resolved, turn them all into songelements for playbac
+    std:string compileErrors;
+    std::vector<SongElement> finishedSong = parseTokens(tokens, &compileErrors);
+    if (finishedSong.empty()) {
+        statusColor = juce::Colours::red;
+        *errorMsg = compileErrors;
+        return {};
+    }
+    return finishedSong;
 }

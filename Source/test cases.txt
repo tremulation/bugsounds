@@ -31,3 +31,10 @@ pattern(0 0 0), 120 500, 0 500,
 
 [rand(100 150) rand(400 600), rand(200 250) rand(300 500)]
 [rand(100 150) rand(400 600), rand(200 250) rand(300 500)] pattern(1)
+
+broken strings for testing resolveRand function
+
+rand(200 100) 1
+lrand(a 200 1000) 1
+lrand(a) 100, lrand(1 500 600) 1
+

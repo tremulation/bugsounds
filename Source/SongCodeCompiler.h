@@ -10,10 +10,12 @@
 
 #pragma once
 
+#include <JuceHeader.h>
 
 #include <vector>
 #include <string>
 #include <iostream>
+#include <map>
 
 struct SongElement {
     enum class Type {
@@ -38,5 +40,8 @@ struct SongElement {
         : type(Type::Pattern), beatPattern(pattern) {}
 };
 
-void printSongElements(const std::vector<SongElement>& songElements);
-std::vector<SongElement> compileSongcode(const std::string& songcode);
+
+std::vector<SongElement> compileSongcode(const std::string& songcode, 
+                                         std::string* errorMsg,
+                                         std::map<char, int>& linkedRandValues,
+                                         juce::Colour& statusColor);

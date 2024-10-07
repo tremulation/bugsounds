@@ -1,20 +1,12 @@
 #include "MainComponent.h"
 #include "SongCodeCompiler.h"
+#include <map>
 
 
 //==============================================================================
 MainComponent::MainComponent()
 {
-    // Set up the songcode editor
-    songcodeEditor.setMultiLine(true);
-    songcodeEditor.setReturnKeyStartsNewLine(true);
-    songcodeEditor.setReadOnly(false);
-    songcodeEditor.setScrollbarsShown(true);
-    songcodeEditor.setCaretVisible(true);
-    songcodeEditor.setPopupMenuEnabled(true);
-    songcodeEditor.setText("Enter your songcode here...");
-    addAndMakeVisible(songcodeEditor);
-
+    addAndMakeVisible(frequencyEditor);
     // Set up the echo button
     echoButton.setButtonText("Generate song from code");
     echoButton.onClick = [this] { echoToConsole(); };
@@ -99,17 +91,23 @@ void MainComponent::resized()
     area.removeFromBottom(10);
 
     //make songCodeEditor fill the remaining space
-    songcodeEditor.setBounds(area);
-
-    songcodeEditor.setBounds(getLocalBounds().reduced(10));
+    frequencyEditor.setBounds(area);
 
 }
 
 void MainComponent::echoToConsole()
 {
-    // Get the text from the editor and print it to the console
-    juce::String songcode = songcodeEditor.getText();
-    std::vector<SongElement> parsedSong = compileSongcode(songcode.toStdString());
+    // First, get the text from the frequencyEditor and compile it
+    juce::String songcode = frequencyEditor.getText();
+    std::string freqStatusMsg;
+    std::map<char, int> linkedRandValues;
+    juce::Colour freqStatusColor; 
+    std::vector<SongElement> parsedSong = compileSongcode(songcode.toStdString(), &freqStatusMsg, linkedRandValues, freqStatusColor);
+    frequencyEditor.setErrorMessage(freqStatusMsg, freqStatusColor);
+
+    // Next, compile the resonator frequency with the mapped vals from the last one
+
+    // Validate that the resonator song doesn't contain any patterns
 
     juce::String output;
     for (size_t i = 0; i < parsedSong.size(); ++i) {
