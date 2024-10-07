@@ -1,29 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="v7WJfC" name="bugsounds" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" compilerFlagSchemes=""
-              pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
-  <MAINGROUP id="j5AzTJ" name="bugsounds">
-    <GROUP id="{E3507E12-ACF5-B5C3-72F5-EFA529559E89}" name="Source">
-      <FILE id="Pb3Jnm" name="songcodeEditor.cpp" compile="1" resource="0"
-            file="Source/songcodeEditor.cpp"/>
-      <FILE id="WtkfQr" name="songcodeEditor.h" compile="0" resource="0"
-            file="Source/songcodeEditor.h"/>
-      <FILE id="zi5R3v" name="SongCodeCompiler.h" compile="0" resource="0"
-            file="Source/SongCodeCompiler.h"/>
-      <FILE id="cZVMLX" name="SongCodeCompiler.cpp" compile="1" resource="0"
+<JUCERPROJECT id="yTOXQh" name="bugsounds" projectType="audioplug" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+  <MAINGROUP id="RIYwew" name="bugsounds">
+    <GROUP id="{28D391B9-8AA7-A9B0-B4E4-937980DDCF90}" name="Source">
+      <FILE id="SHI33s" name="SongCodeCompiler.cpp" compile="1" resource="0"
             file="Source/SongCodeCompiler.cpp"/>
-      <FILE id="BBOfaL" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"
-            compilerFlagScheme=""/>
-      <FILE id="MlQRH1" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
-      <FILE id="sJjE75" name="MainComponent.cpp" compile="1" resource="0"
-            file="Source/MainComponent.cpp"/>
+      <FILE id="zqjN1M" name="SongCodeCompiler.h" compile="0" resource="0"
+            file="Source/SongCodeCompiler.h"/>
+      <FILE id="QKqkC6" name="songcodeEditor.cpp" compile="1" resource="0"
+            file="Source/songcodeEditor.cpp"/>
+      <FILE id="VdzSP9" name="songcodeEditor.h" compile="0" resource="0"
+            file="Source/songcodeEditor.h"/>
+      <FILE id="p7p3N5" name="test cases.md" compile="0" resource="1" file="Source/test cases.md"/>
+      <FILE id="dFJxzX" name="PluginProcessor.cpp" compile="1" resource="0"
+            file="Source/PluginProcessor.cpp"/>
+      <FILE id="yLLNCz" name="PluginProcessor.h" compile="0" resource="0"
+            file="Source/PluginProcessor.h"/>
+      <FILE id="AapkBt" name="PluginEditor.cpp" compile="1" resource="0"
+            file="Source/PluginEditor.cpp"/>
+      <FILE id="Lv4Bmz" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="0"
+            useGlobalPath="1"/>
     <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
@@ -34,17 +38,18 @@
     <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
   </MODULES>
-  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
   <EXPORTFORMATS>
     <VS2022 targetFolder="Builds/VisualStudio2022">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="NewProject"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="NewProject"/>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="bugsounds"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="bugsounds"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_audio_basics" path="../JUCE/modules"/>
         <MODULEPATH id="juce_audio_devices" path="../JUCE/modules"/>
         <MODULEPATH id="juce_audio_formats" path="../JUCE/modules"/>
+        <MODULEPATH id="juce_audio_plugin_client" path="../JUCE/modules"/>
         <MODULEPATH id="juce_audio_processors" path="../JUCE/modules"/>
         <MODULEPATH id="juce_audio_utils" path="../JUCE/modules"/>
         <MODULEPATH id="juce_core" path="../JUCE/modules"/>
