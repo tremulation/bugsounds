@@ -102,12 +102,12 @@ int resolveRand(const std::string& randToken) {
     std::istringstream iss(range);
     int min, max;
     if (!(iss >> min >> max)) {
-        throw std::invalid_argument("Invalid rand() format: unable to parse numbers");
+        throw std::invalid_argument("Invalid rand() format: unable to parse numbers: " + randToken);
     }
 
     // Check if min is less than or equal to max
     if (min > max) {
-        throw std::invalid_argument("Invalid range: min must be less than or equal to max");
+        throw std::invalid_argument("Invalid range: min must be less than or equal to max: " + randToken);
     }
 
     // Use static variables for the random number generator to avoid reinitializing every call
@@ -246,7 +246,7 @@ std::vector<std::string> firstPassTokenize(const std::string& song, std::string*
     const std::string randNumber = R"(rand\(\d+ \d+\) \d+)";
     const std::string justNumber = R"(\d+)";
     const std::string justRand = R"(rand\(\d+ \d+\))";
-    const std::string patternBlock = R"(pattern\((?:\d+|rand\(\d+ \d+\))(?: (?:\d+|rand\(\d+ \d+\)))*\))";
+    const std::string patternBlock = R"(pattern\((?:\d+|rand\(\d+ \d+\)|lrand\([a-z]( \d+ \d+)?\))(?:\ (?:\d+|rand\(\d+ \d+\)|lrand\([a-z]( \d+ \d+)?\)))*\))"; // just putting this comment here because i want this line to be a little longer
     const std::string justLrand = R"(lrand\(([a-z]( \d+ \d+)?)\))";
     const std::string lrandLrand = R"((lrand\(([a-z]( \d+ \d+)?)\) lrand\(([a-z]( \d+ \d+)?)\)))";
     const std::string lrandNumber = R"((lrand\(([a-z]( \d+ \d+)?)\) \d+))";
@@ -349,11 +349,11 @@ vector<string> secondPassTokenize(const vector<string>& tokens, std::string* err
 
     //find number of iterations for this loop
     //resolve rands to a number if there is one
-    const std::string justNumber = R"(\d+)";
-    const std::string justRand = R"(rand\(\d+ \d+\))";
+    const std::string justNumber = R"(^(\d+)$)";
+    const std::string justRand = R"(^(rand\(\d+ \d+\))$)";
 
-    const std::regex justNumberPattern("^(\d+)$");
-    const std::regex justRandPattern("^(rand\(\d+ \d+\))$");
+    const std::regex justNumberPattern(justNumber);
+    const std::regex justRandPattern(justRand);
 
     auto loopIterationToken = tempTokens[loopEndInd + 1];
     //just a number, rand, and lrand respectively. 
@@ -366,6 +366,7 @@ vector<string> secondPassTokenize(const vector<string>& tokens, std::string* err
             loopIterationCount = resolveRand(loopIterationToken);
         }
         else {
+            juce::Logger::writeToLog("lrand detected: " + loopIterationToken + "\n");
             loopIterationCount = resolveLinkedRand(loopIterationToken, linkedRandValues);
 
         }
@@ -419,11 +420,12 @@ vector<string> secondPassTokenize(const vector<string>& tokens, std::string* err
 vector<string> thirdPassTokenize(const vector<string>& tokens, std::string* errorMsg, std::map<char, int>& linkedRandValues)
 {
     std::vector<std::string> resolvedTokens;
+    std::vector<std::string> resolvedTokens2;
 
+    //resolve lrands, and then resolve rands
     for (int i = 0; i < tokens.size(); i++) {
         std::string str = tokens[i];
-
-        //resolve lrands, and then resolve rands
+        
         string::size_type pos = 0;
 
         if ((pos = str.find("lrand", pos)) != string::npos) {
@@ -447,13 +449,20 @@ vector<string> thirdPassTokenize(const vector<string>& tokens, std::string* erro
                 str = str.substr(0, pos) + resolvedValueString + str.substr(endPos + 1, string::npos);
                 pos = pos + resolvedValueString.length(); // Move past the new text
             }
-            resolvedTokens.push_back(str);
         }
-        else if ((pos = str.find("rand", pos)) != string::npos) {
+        resolvedTokens.push_back(str);
+    }
+
+    for (int i = 0; i < resolvedTokens.size(); i++) {
+        std::string str = resolvedTokens[i];
+
+        string::size_type pos = 0;
+
+        if ((pos = str.find("rand", pos)) != string::npos) {
             //at least one rand found. Iterate through string and resolve it and any others  
             while ((pos = str.find("rand", pos)) != string::npos) {
                 int endPos = str.find(")", pos);
-                
+
                 //extract and resolve the rand
                 int resolvedValue = -1;
                 string extractedRand = str.substr(pos, endPos + 1 - pos);
@@ -464,19 +473,16 @@ vector<string> thirdPassTokenize(const vector<string>& tokens, std::string* erro
                     *errorMsg = e.what();
                     return {};
                 }
-                
+
                 //update the string and move the pos past the value we finished
                 string resolvedValueString = to_string(resolvedValue);
                 str = str.substr(0, pos) + resolvedValueString + str.substr(endPos + 1, string::npos);
                 pos = pos + resolvedValueString.length(); // Move past the new text
             }
-            resolvedTokens.push_back(str);
         }
-        else {
-            resolvedTokens.push_back(str);
-        }
+        resolvedTokens2.push_back(str);
     }
-    return resolvedTokens;
+    return resolvedTokens2;
 }
 
 
