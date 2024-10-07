@@ -407,16 +407,9 @@ vector<string> secondPassTokenize(const vector<string>& tokens, std::string* err
 // rand(a b) number
 // rand(a b) rand(b c)
 // pattern( ... )
-
-// NEW ONES:
 // lrand(a min max) number
 // number lrand(a min max)
 // lrand(a min max) lrand(a min max)
-
-
-
-
-
 vector<string> thirdPassTokenize(const vector<string>& tokens, std::string* errorMsg, std::map<char, int>& linkedRandValues)
 {
     std::vector<std::string> resolvedTokens;

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="v7WJfC" name="bugsounds" projectType="guiapp" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" compilerFlagSchemes="">
+<JUCERPROJECT id="v7WJfC" name="bugsounds" projectType="audioplug" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" compilerFlagSchemes=""
+              pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="j5AzTJ" name="bugsounds">
     <GROUP id="{E3507E12-ACF5-B5C3-72F5-EFA529559E89}" name="Source">
       <FILE id="Pb3Jnm" name="songcodeEditor.cpp" compile="1" resource="0"
