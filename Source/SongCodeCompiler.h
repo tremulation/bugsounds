@@ -26,9 +26,9 @@ struct SongElement {
     Type type;
 
     // For notes
-    float startFrequency;
-    float endFrequency;
-    float duration;
+    float startFrequency = -1.0;
+    float endFrequency = -1.0;
+    float duration = -1.0;
 
     // For patterns
     std::vector<uint8_t> beatPattern;

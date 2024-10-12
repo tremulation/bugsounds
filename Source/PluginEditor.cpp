@@ -16,7 +16,7 @@ BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor (BugsoundsAudioProc
 {
     addAndMakeVisible(frequencyEditor);
     testButton.setButtonText("Play song from code");
-    testButton.onClick = [this] { compileAndPlayback(); };
+    testButton.onClick = [this] { freqCodeEditorHasChanged(); };
     addAndMakeVisible(testButton);
 
 
@@ -49,45 +49,28 @@ void BugsoundsAudioProcessorEditor::resized()
 }
 
 
-void logCompiledSong(std::vector<SongElement> compiledSong)
-{
-    juce::String output;
-    for (size_t i = 0; i < compiledSong.size(); ++i) {
-        const auto& element = compiledSong[i];
-        output += "Element " + juce::String(i) + ": ";
-
-        if (element.type == SongElement::Type::Note) {
-            output += "Note - Start Freq: " + juce::String(element.startFrequency)
-                + " Hz, End Freq: " + juce::String(element.endFrequency)
-                + " Hz, Duration: " + juce::String(element.duration) + " ms\n";
-        }
-        else if (element.type == SongElement::Type::Pattern) {
-            output += "Pattern - Beats: ";
-            for (const auto& beat : element.beatPattern) {
-                output += juce::String(static_cast<int>(beat)) + " ";
-            }
-            output += "\n";
-        }
-    }
-    juce::Logger::writeToLog(output);
+//if this doesn't work implement a fifo queue for transferring the string
+void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
+    audioProcessor.setFrequencyCodeString(frequencyEditor.getText());
 }
 
 
-
-void BugsoundsAudioProcessorEditor::compileAndPlayback()
-{
-    // First, get the text from the frequencyEditor and compile it
-    juce::String songcode = frequencyEditor.getText();
-    std::string freqStatusMsg;
-    std::map<char, int> linkedRandValues;
-    juce::Colour freqStatusColor;
-    std::vector<SongElement> parsedSong = compileSongcode(songcode.toStdString(), &freqStatusMsg, linkedRandValues, freqStatusColor);
-    frequencyEditor.setErrorMessage(freqStatusMsg, freqStatusColor);
-    logCompiledSong(parsedSong);
- 
-    // Validate that the resonator song doesn't contain any patterns
-    
-    
-}
+//void BugsoundsAudioProcessorEditor::compileAndPlayback()
+//{
+//    // First, get the text from the frequencyEditor and compile it
+//    juce::String songcode = frequencyEditor.getText();
+//    std::string freqStatusMsg;
+//    std::map<char, int> linkedRandValues;
+//    juce::Colour freqStatusColor;
+//    std::vector<SongElement> parsedSong = compileSongcode(songcode.toStdString(),
+//                                                          &freqStatusMsg,
+//                                                          linkedRandValues,
+//                                                          freqStatusColor);
+//    frequencyEditor.setErrorMessage(freqStatusMsg, freqStatusColor);
+//    logCompiledSong(parsedSong);
+// 
+//    // send it to the audioprocessor so the synth can get to it
+//    audioProcessor.playProvidedSong(parsedSong);
+//}
 
 

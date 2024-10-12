@@ -9,6 +9,9 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "SynthSound.h"
+#include "SynthVoice.h"
+#include "SongCodeCompiler.h"
 
 //==============================================================================
 /**
@@ -53,7 +56,23 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    //==============================================================================
+    
+    //MY FUNCTIONS
+    void setFrequencyCodeString(const juce::String& newCode) {
+        myVoice->setSongString(newCode);
+    }
+
+    juce::String getFrequencyCodeString() const {
+        return frequencyCodeString;
+    }
+
 private:
+    juce::String frequencyCodeString;
+    juce::Synthesiser mySynth;
+    SynthVoice* myVoice;
+    double lastSampleRate;
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BugsoundsAudioProcessor)
 };

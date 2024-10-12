@@ -22,6 +22,11 @@ BugsoundsAudioProcessor::BugsoundsAudioProcessor()
                        )
 #endif
 {
+    mySynth.clearVoices();
+    myVoice = new SynthVoice();
+    mySynth.addVoice(myVoice);
+    mySynth.clearSounds();
+    mySynth.addSound(new SynthSound());
 }
 
 BugsoundsAudioProcessor::~BugsoundsAudioProcessor()
@@ -95,12 +100,16 @@ void BugsoundsAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+    juce::ignoreUnused(samplesPerBlock);    //clears out unused samples from last key press
+    lastSampleRate = sampleRate;
+    mySynth.setCurrentPlaybackSampleRate(lastSampleRate);
 }
 
 void BugsoundsAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
+ 
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -156,6 +165,9 @@ void BugsoundsAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 
         // ..do something to the data...
     }
+
+    buffer.clear();
+    mySynth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 }
 
 //==============================================================================
@@ -188,4 +200,12 @@ void BugsoundsAudioProcessor::setStateInformation (const void* data, int sizeInB
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new BugsoundsAudioProcessor();
+
+
 }
+
+//==============================================================================
+//MY FUNCTIONS
+
+
+

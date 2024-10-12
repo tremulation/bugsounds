@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="yTOXQh" name="bugsounds" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="RIYwew" name="bugsounds">
     <GROUP id="{28D391B9-8AA7-A9B0-B4E4-937980DDCF90}" name="Source">
+      <FILE id="rGCTH3" name="SynthVoice.h" compile="0" resource="0" file="Source/SynthVoice.h"/>
+      <FILE id="Opc9RP" name="SynthSound.h" compile="0" resource="0" file="Source/SynthSound.h"/>
       <FILE id="SHI33s" name="SongCodeCompiler.cpp" compile="1" resource="0"
             file="Source/SongCodeCompiler.cpp"/>
       <FILE id="zqjN1M" name="SongCodeCompiler.h" compile="0" resource="0"
