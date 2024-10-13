@@ -164,9 +164,8 @@ private:
         auto noteLengthInSamples = (nextNote.duration / 1000) * getSampleRate();
 
         angleDelta = startingAngleDelta;
-        angle = 0;
         samplesRemainingInNote = (int) noteLengthInSamples;
         deltaIncreasePerSample = (endingAngleDelta - startingAngleDelta) / noteLengthInSamples;
-        juce::Logger::writeToLog("delta increase: " + std::to_string(deltaIncreasePerSample) + ". samples remaining: " + std::to_string(samplesRemainingInNote));
+        //juce::Logger::writeToLog("delta increase: " + std::to_string(deltaIncreasePerSample) + ". samples remaining: " + std::to_string(samplesRemainingInNote));
     }
 };
