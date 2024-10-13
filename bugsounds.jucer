@@ -14,7 +14,6 @@
             file="Source/songcodeEditor.cpp"/>
       <FILE id="VdzSP9" name="songcodeEditor.h" compile="0" resource="0"
             file="Source/songcodeEditor.h"/>
-      <FILE id="p7p3N5" name="test cases.md" compile="0" resource="1" file="Source/test cases.md"/>
       <FILE id="dFJxzX" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="yLLNCz" name="PluginProcessor.h" compile="0" resource="0"

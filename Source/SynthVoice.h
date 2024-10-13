@@ -28,12 +28,11 @@ public:
     //currently plays a sine wave that rises in pitch by an octave over the course of the note
     void startNote(int /*midiNote*/, float velocity, juce::SynthesiserSound* /*sound*/, int /*currentPitchWheelPosition*/) override {
         //wait for current note to stop before playing another
+        
         if (playing == true) {
-            clearCurrentNote(); // should this be included, or is return enough?
+            clearCurrentNote();
             return;
         }
-
-        
 
         //get the song from the UI code editor
         std::string error; 
@@ -41,7 +40,13 @@ public:
         juce::Colour freqStatusColor;
         song = compileSongcode(songString.toStdString(), &error, linkedRandValues, freqStatusColor);
         logCompiledSong(song);
-        juce::Logger::writeToLog(error);
+        
+        if (song.size() == 0) {
+            juce::Logger::writeToLog("song size is " + std::to_string(song.size()));
+            clearCurrentNote();
+            return;
+        }
+        
 
         //set up some data to keep track of the sine
         level = velocity * 0.15;

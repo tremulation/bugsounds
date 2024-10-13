@@ -507,7 +507,7 @@ std::vector<SongElement> compileSongcode(const std::string& songcode, std::strin
     std:string compileErrors;
     std::vector<SongElement> finishedSong = parseTokens(tokens, &compileErrors);
     if (finishedSong.empty()) {
-        statusColor = juce::Colours::red;
+        statusColor = juce::Colours::darkred;
         *errorMsg = compileErrors;
         return {};
     }

@@ -51,26 +51,23 @@ void BugsoundsAudioProcessorEditor::resized()
 
 //if this doesn't work implement a fifo queue for transferring the string
 void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
-    audioProcessor.setFrequencyCodeString(frequencyEditor.getText());
+    juce::String songcode = frequencyEditor.getText();
+    std::string freqStatusMsg;
+    std::map<char, int> linkedRandValues;
+    juce::Colour freqStatusColor;
+    std::vector<SongElement> parsedSong = compileSongcode(songcode.toStdString(),
+                                                           &freqStatusMsg,
+                                                           linkedRandValues,
+                                                           freqStatusColor);
+    
+    frequencyEditor.setErrorMessage(freqStatusMsg, freqStatusColor);
+    
+    if (freqStatusMsg.substr(0, 5) != "Error") {
+        audioProcessor.setFrequencyCodeString(frequencyEditor.getText());
+    }
+    else {
+        audioProcessor.setFrequencyCodeString("");
+    }
 }
-
-
-//void BugsoundsAudioProcessorEditor::compileAndPlayback()
-//{
-//    // First, get the text from the frequencyEditor and compile it
-//    juce::String songcode = frequencyEditor.getText();
-//    std::string freqStatusMsg;
-//    std::map<char, int> linkedRandValues;
-//    juce::Colour freqStatusColor;
-//    std::vector<SongElement> parsedSong = compileSongcode(songcode.toStdString(),
-//                                                          &freqStatusMsg,
-//                                                          linkedRandValues,
-//                                                          freqStatusColor);
-//    frequencyEditor.setErrorMessage(freqStatusMsg, freqStatusColor);
-//    logCompiledSong(parsedSong);
-// 
-//    // send it to the audioprocessor so the synth can get to it
-//    audioProcessor.playProvidedSong(parsedSong);
-//}
 
 
