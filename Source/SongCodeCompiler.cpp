@@ -496,7 +496,7 @@ std::vector<SongElement> compileSongcode(const std::string& songcode, std::strin
     std::vector<std::string> tokens = tokenize(songcode, &tokenizeErrors, linkedRandValues);
     if (tokens.empty()) {
         // Handle error: return an empty vector or throw an exception
-        statusColor = juce::Colours::red;
+        statusColor = juce::Colours::darkred;
         *errorMsg = tokenizeErrors;
         return {};
     }
