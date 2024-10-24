@@ -47,12 +47,11 @@ public:
             return;
         }
         
-
-        //set up some data to keep track of the sine
+        //set up stuff to keep track of the impulses
         level = velocity * 0.15;
-        angle = 0.0;
+        phase = 0.00;
 
-        //and data to keep track of the song
+        //and data for the song state
         curElementIndex = 0;
         setupNextNote(song[0]);
         playing = true;
@@ -104,30 +103,30 @@ public:
 
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
         if (!playing) return;
-           
-        while (--numSamples >= 0) {
-            //calculate current amplitude for the sine
-            auto currentSample = (float)(std::sin(angle) * level);
 
-            //add it to each channel
-            for (auto i = outputBuffer.getNumChannels(); --i >= 0;) {
-                outputBuffer.addSample(i, startSample, currentSample);
+        while (--numSamples >= 0) {
+            //should we place an impulse on this sample?
+            if (phase >= 1.0) {
+                for (auto i = outputBuffer.getNumChannels(); --i >= 0;) {
+                    outputBuffer.addSample(i, startSample, level);
+                }
+                phase = 0.0;
             }
 
-            //move the sine wave along
-            angle += angleDelta;
+            //move impulse generator along
+            phase += phaseDelta;
             ++startSample;
 
-            //move the frequency towards the next note
+            //move the frequency of the clicks towards the next note
             --samplesRemainingInNote;
-            angleDelta += deltaIncreasePerSample;
+            phaseDelta += deltaChangePerSample;
 
-            //this note is finished. Either go to the next note or DIE
+            //if the note is finished go the the next one, or DIE
             if (samplesRemainingInNote == 0) {
                 ++curElementIndex;
                 if (curElementIndex == song.size()) {
                     //song is finished
-                    angleDelta = 0;
+                    phaseDelta = 0.0;
                     clearCurrentNote();
                     playing = false;
                 }
@@ -152,25 +151,26 @@ private:
     //song state
     std::vector<SongElement> song = {};
     int curElementIndex = 0;
-    double deltaIncreasePerSample = 0.0;
     bool playing = false;
     int samplesRemainingInNote = 0; 
 
-    //sinewave state
-    double angle = 0.0;
-    double angleDelta = 0.0;
-    double level = 0.0;
+    //impulse state
+    double phase = 0.0;
+    double phaseDelta = 0.0;
+    double deltaChangePerSample = 0.0;
+    double level;
+
 
     void setupNextNote(struct SongElement nextNote) {
         // calculate how much the angleDelta will have to increase/decrease by
         // to hit the end frequency in exactly curElement->duration ms.
-        auto startingAngleDelta = (nextNote.startFrequency / getSampleRate()) * 2.0 * juce::MathConstants<double>::pi;
-        auto endingAngleDelta = (nextNote.endFrequency / getSampleRate()) * 2.0 * juce::MathConstants<double>::pi;
+        auto startingPhaseChange = nextNote.startFrequency / getSampleRate();
+        auto endingPhaseChange   = nextNote.endFrequency / getSampleRate();
         auto noteLengthInSamples = (nextNote.duration / 1000) * getSampleRate();
 
-        angleDelta = startingAngleDelta;
-        samplesRemainingInNote = (int) noteLengthInSamples;
-        deltaIncreasePerSample = (endingAngleDelta - startingAngleDelta) / noteLengthInSamples;
-        //juce::Logger::writeToLog("delta increase: " + std::to_string(deltaIncreasePerSample) + ". samples remaining: " + std::to_string(samplesRemainingInNote));
+        phaseDelta = startingPhaseChange;
+        samplesRemainingInNote = (int)noteLengthInSamples;
+        deltaChangePerSample = (endingPhaseChange - startingPhaseChange) / noteLengthInSamples;
+        //juce::Logger::writeToLog("delta increase: " + std::to_string(deltaChangePerSample) + ". samples remaining: " + std::to_string(samplesRemainingInNote));
     }
 };
