@@ -46,8 +46,13 @@ public:
             clearCurrentNote();
             return;
         }
+
+        //add the default pattern if the first note isn't a pattern
+        if (!song.empty() && song[0].type != SongElement::Type::Pattern) {
+            song.insert(song.begin(), SongElement(std::vector<uint8_t>{1}));
+        }
         
-        //set up stuff to keep track of the impulses
+        //set up stuff to keep track of the impulse generator wave
         level = velocity * 0.15;
         phase = 0.00;
 
@@ -106,9 +111,27 @@ public:
 
         while (--numSamples >= 0) {
             //should we place an impulse on this sample?
-            if (phase >= 1.0) {
-                startNewClick();
+            if (phase >= (1.0 / patternPhaseDivisor)) {
+                if (beatPattern[patternIndex] != 0) {
+                    startNewClick();
+                }
+                
                 phase = 0.0;
+
+                //advance click here
+                clicksRemainingInBeat--;
+                if (clicksRemainingInBeat <= 0) {
+                    patternIndex = (++patternIndex) % beatPattern.size();
+
+                    if (beatPattern[patternIndex] == 0) {
+                        clicksRemainingInBeat = 1;
+                        patternPhaseDivisor = 1;
+                    }
+                    else {
+                        clicksRemainingInBeat = beatPattern[patternIndex];
+                        patternPhaseDivisor = beatPattern[patternIndex];
+                    }
+                }
             }
             //add the output of all the active clicks to the channels
             float clickOutput = renderActiveClicks();
@@ -174,17 +197,45 @@ private:
     };
     std::vector<Click> activeClicks;
 
-    void setupNextNote(struct SongElement nextNote) {
-        // calculate how much the angleDelta will have to increase/decrease by
-        // to hit the end frequency in exactly curElement->duration ms.
-        auto startingPhaseChange = nextNote.startFrequency / getSampleRate();
-        auto endingPhaseChange   = nextNote.endFrequency / getSampleRate();
-        auto noteLengthInSamples = (nextNote.duration / 1000) * getSampleRate();
+    //pattern state
+    std::vector <uint8_t> beatPattern = { 1 };
+    int patternIndex = 0;
+    int patternPhaseDivisor = 1;
+    int clicksRemainingInBeat = 1;
+    
 
-        phaseDelta = startingPhaseChange;
-        samplesRemainingInNote = (int)noteLengthInSamples;
-        deltaChangePerSample = (endingPhaseChange - startingPhaseChange) / noteLengthInSamples;
-        //juce::Logger::writeToLog("delta increase: " + std::to_string(deltaChangePerSample) + ". samples remaining: " + std::to_string(samplesRemainingInNote));
+    void setupNextNote(struct SongElement nextNote) {
+        if (nextNote.type == SongElement::Type::Pattern) {
+            beatPattern = nextNote.beatPattern;
+            patternIndex = 0;
+
+            if (beatPattern[0] == 0) {
+                clicksRemainingInBeat = 1;
+                patternPhaseDivisor = 1;
+            }
+            else {
+                clicksRemainingInBeat = beatPattern[0];
+                patternPhaseDivisor = beatPattern[0];
+            }
+            
+            phase = 1.0;    //trigger click on next sample. not sure this's necessary
+
+            //advance to next not0e
+            curElementIndex++;
+            setupNextNote(song[curElementIndex]);
+        }
+        else {
+            // calculate how much the angleDelta will have to increase/decrease by
+            // to hit the end frequency in exactly curElement->duration ms.
+            auto startingPhaseChange = nextNote.startFrequency / getSampleRate();
+            auto endingPhaseChange = nextNote.endFrequency / getSampleRate();
+            auto noteLengthInSamples = (nextNote.duration / 1000) * getSampleRate();
+
+            phaseDelta = startingPhaseChange;
+            samplesRemainingInNote = (int)noteLengthInSamples;
+            deltaChangePerSample = (endingPhaseChange - startingPhaseChange) / noteLengthInSamples;
+            //juce::Logger::writeToLog("delta increase: " + std::to_string(deltaChangePerSample) + ". samples remaining: " + std::to_string(samplesRemainingInNote));
+        }
     }
 
     float renderActiveClicks() {
@@ -210,7 +261,7 @@ private:
     void startNewClick() {
         Click newClick;
         newClick.frequency = 3000.0f;
-        newClick.samplesRemaining = 1000;
+        newClick.samplesRemaining = 100;
         newClick.phase = 0.0f;
         activeClicks.push_back(newClick);
     }
