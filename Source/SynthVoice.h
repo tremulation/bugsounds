@@ -107,10 +107,13 @@ public:
         while (--numSamples >= 0) {
             //should we place an impulse on this sample?
             if (phase >= 1.0) {
-                for (auto i = outputBuffer.getNumChannels(); --i >= 0;) {
-                    outputBuffer.addSample(i, startSample, level);
-                }
+                startNewClick();
                 phase = 0.0;
+            }
+            //add the output of all the active clicks to the channels
+            float clickOutput = renderActiveClicks();
+            for (auto i = outputBuffer.getNumChannels(); --i >= 0;) {
+                outputBuffer.addSample(i, startSample, clickOutput);
             }
 
             //move impulse generator along
@@ -138,6 +141,8 @@ public:
         }
     }
 
+    
+
     //===========================================================================
 
     void setSongString(juce::String newSongString)  {
@@ -148,6 +153,7 @@ public:
 private:
 
     juce::String songString;
+
     //song state
     std::vector<SongElement> song = {};
     int curElementIndex = 0;
@@ -160,6 +166,13 @@ private:
     double deltaChangePerSample = 0.0;
     double level;
 
+    //click generator state
+    struct Click {
+        float frequency;
+        int samplesRemaining;
+        float phase;
+    };
+    std::vector<Click> activeClicks;
 
     void setupNextNote(struct SongElement nextNote) {
         // calculate how much the angleDelta will have to increase/decrease by
@@ -172,5 +185,33 @@ private:
         samplesRemainingInNote = (int)noteLengthInSamples;
         deltaChangePerSample = (endingPhaseChange - startingPhaseChange) / noteLengthInSamples;
         //juce::Logger::writeToLog("delta increase: " + std::to_string(deltaChangePerSample) + ". samples remaining: " + std::to_string(samplesRemainingInNote));
+    }
+
+    float renderActiveClicks() {
+        float output = 0.0;
+
+        //process all the clicks the synth is currently playing
+        for (auto& click : activeClicks) {
+            output += std::sin(click.phase * 2.0f * juce::MathConstants<float>::pi) * level;
+            click.phase += click.frequency / getSampleRate();
+            if (click.phase >= 1.0f) click.phase -= 1.0f;
+            click.samplesRemaining--;
+        }
+
+        //remove finished clicks
+        activeClicks.erase(
+            std::remove_if(activeClicks.begin(), activeClicks.end(),
+                [](const Click& click) { return click.samplesRemaining <= 0; }),
+            activeClicks.end()
+        );
+        return output;
+    }
+
+    void startNewClick() {
+        Click newClick;
+        newClick.frequency = 3000.0f;
+        newClick.samplesRemaining = 1000;
+        newClick.phase = 0.0f;
+        activeClicks.push_back(newClick);
     }
 };
