@@ -25,6 +25,7 @@ BugsoundsAudioProcessor::BugsoundsAudioProcessor()
     mySynth.clearVoices();
     myVoice = new SynthVoice();
     mySynth.addVoice(myVoice);
+    myVoice->setAPVTS(&apvts);
     mySynth.clearSounds();
     mySynth.addSound(new SynthSound());
 }
@@ -195,6 +196,57 @@ void BugsoundsAudioProcessor::setStateInformation (const void* data, int sizeInB
     // whose contents will have been created by the getStateInformation() call.
 }
 
+juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::createParameterLayout()
+{
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    //resonator parameters
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Resonator Q",
+        "Resonator Q",
+        juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f),
+        1.f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Resonator Gain",
+        "Resonator Gain",
+        juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
+        0.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "Resonator On",
+        "Resonator On",
+        true));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Resonator Harmonics",
+        "Resonator Harmonics",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
+        0.5f));
+
+    //click parameters
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Click Timing Random",
+        "Timing Randomness",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
+        0.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Click Volume Random",
+        "Volume Randomness",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
+        0.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Click Pitch Random",
+        "Pitch Randomness",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
+        0.0f));
+
+    return layout;
+}
+
+
 //==============================================================================
 // This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
@@ -206,6 +258,4 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 
 //==============================================================================
 //MY FUNCTIONS
-
-
 

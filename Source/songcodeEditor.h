@@ -15,7 +15,7 @@
 class SongcodeEditor : public juce::Component
 {
     public:
-        SongcodeEditor();
+        SongcodeEditor(const juce::String& title);
         ~SongcodeEditor() override;
 
         void paint(juce::Graphics&) override;
@@ -26,6 +26,7 @@ class SongcodeEditor : public juce::Component
 
         void SongcodeEditor::setErrorMessage(const juce::String& errorMessage, juce::Colour color);
     private:
+        juce::Label titleLabel;
         juce::TextEditor mainEditor;
         juce::Label errorLabel;
 

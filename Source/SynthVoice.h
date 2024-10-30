@@ -52,6 +52,8 @@ public:
             song.insert(song.begin(), SongElement(std::vector<uint8_t>{1}));
         }
         
+        rng.setSeedRandomly();
+
         //set up stuff to keep track of the impulse generator wave
         level = velocity * 0.15;
         phase = 0.00;
@@ -111,7 +113,7 @@ public:
 
         while (--numSamples >= 0) {
             //should we place an impulse on this sample?
-            if (phase >= (1.0 / patternPhaseDivisor)) {
+            if (phase >= ((1.0 / patternPhaseDivisor) + timingOffset)) {
                 if (beatPattern[patternIndex] != 0) {
                     startNewClick();
                 }
@@ -132,6 +134,11 @@ public:
                         patternPhaseDivisor = beatPattern[patternIndex];
                     }
                 }
+
+                //calculate new random offset for next click's phase
+                float offsetScalar = *apvts->getRawParameterValue("Click Timing Random"); //0.0 to 1.0
+                float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax; 
+                timingOffset = (randomOffset * offsetScalar) * (1.0 / patternPhaseDivisor);
             }
             //add the output of all the active clicks to the channels
             float clickOutput = renderActiveClicks();
@@ -173,9 +180,17 @@ public:
         songString = newSongString;
     }
 
+    void setAPVTS(juce::AudioProcessorValueTreeState* apvtsPtr) {
+        apvts = apvtsPtr;
+    }
+
 private:
 
+    juce::Random rng;
+    juce::AudioProcessorValueTreeState* apvts = nullptr;
     juce::String songString;
+
+    //declare random number generator here
 
     //song state
     std::vector<SongElement> song = {};
@@ -188,12 +203,15 @@ private:
     double phaseDelta = 0.0;
     double deltaChangePerSample = 0.0;
     double level;
+    float timingOffset = 0.0;
+    float timingOffsetMax = .50;     // 10%
 
     //click generator state
     struct Click {
         float frequency;
         int samplesRemaining;
         float phase;
+        float level;
     };
     std::vector<Click> activeClicks;
 
@@ -220,7 +238,7 @@ private:
             
             phase = 1.0;    //trigger click on next sample. not sure this's necessary
 
-            //advance to next not0e
+            //advance to next note
             curElementIndex++;
             setupNextNote(song[curElementIndex]);
         }
@@ -243,7 +261,7 @@ private:
 
         //process all the clicks the synth is currently playing
         for (auto& click : activeClicks) {
-            output += std::sin(click.phase * 2.0f * juce::MathConstants<float>::pi) * level;
+            output += std::sin(click.phase * 2.0f * juce::MathConstants<float>::pi) * click.level;
             click.phase += click.frequency / getSampleRate();
             if (click.phase >= 1.0f) click.phase -= 1.0f;
             click.samplesRemaining--;
@@ -260,9 +278,29 @@ private:
 
     void startNewClick() {
         Click newClick;
-        newClick.frequency = 3000.0f;
+        //use the random number generator and the range from the parameters to change the frequency of this click
+        //remember the range of the parameter is 0 (no randomness) to 1 (very random pitch)
+        //at randomness = 1, the random value will have a range of (0, 2 * baseFreq)
+        float baseFreq = 3000.0f;
+        float freqRandomnessAmount = *apvts->getRawParameterValue("Click Pitch Random");   //val from 0 to 1, representing how random it should be
+        float freqRandomOffset = ((rng.nextFloat() * 2.0f) - 1.0f) * freqRandomnessAmount;
+        float frequencyMultiplier = std::pow(2.0f, freqRandomOffset);
+
+        ////calculate new random offset for next click's phase
+        //float offsetScalar = *apvts->getRawParameterValue("Click Timing Random"); //0.0 to 1.0
+        //float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax;
+        //timingOffset = randomOffset * offsetScalar;
+        //juce::Logger::writeToLog("New offset:" + std::to_string(timingOffset));
+
+        float baseLevel = 1.f;
+        float levelRandomnessAmount = *apvts->getRawParameterValue("Click Volume Random");
+        float levelOffsetScalar = 1 - (rng.nextFloat() * levelRandomnessAmount);
+        float randomizedLevel = baseLevel * levelOffsetScalar;
+        
+        newClick.frequency = baseFreq * frequencyMultiplier;
         newClick.samplesRemaining = 100;
         newClick.phase = 0.0f;
+        newClick.level = randomizedLevel;
         activeClicks.push_back(newClick);
     }
 };

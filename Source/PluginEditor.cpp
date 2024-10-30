@@ -12,18 +12,15 @@
 
 //==============================================================================
 BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor (BugsoundsAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+    : AudioProcessorEditor (&p), audioProcessor (p), clickSettingsRack(p), frequencyEditor("Frequency Editor")
 {
     addAndMakeVisible(frequencyEditor);
     testButton.setButtonText("Play song from code");
     testButton.onClick = [this] { freqCodeEditorHasChanged(); };
     addAndMakeVisible(testButton);
 
-
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
-    setSize (400, 300);
-
+    addAndMakeVisible(clickSettingsRack);
+    setSize(800, 400);
     
 }
 
@@ -40,12 +37,27 @@ void BugsoundsAudioProcessorEditor::paint (juce::Graphics& g)
 
 void BugsoundsAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
-    auto area = getLocalBounds().reduced(10);
-    testButton.setBounds(area.removeFromBottom(30));
-    area.removeFromBottom(10);
-    frequencyEditor.setBounds(area);
+    auto area = getLocalBounds();
+
+    // Split into left and right sections first
+    //left is for entering custom data like pip settings and songcode
+    //right is for knobs that control parameters (things you can save in apvts)
+    auto leftArea = area.removeFromLeft(area.getWidth() * (8.f / 12.f));
+
+    // Now reduce both areas equally
+    // leftArea = leftArea.reduced(5);
+
+    // Left half for text editors and button
+    testButton.setBounds(leftArea.removeFromBottom(30));
+    leftArea.removeFromBottom(5);
+    frequencyEditor.setBounds(leftArea);
+
+    // Right half for controls
+    auto rackHeight = 120;
+    clickSettingsRack.setBounds(area.removeFromTop(rackHeight));
+
+    // Space for additional controls below the rack
+    area.removeFromTop(5);  // Add some spacing after the rack
 }
 
 
