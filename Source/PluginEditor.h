@@ -13,6 +13,7 @@
 #include "songcodeEditor.h"
 #include "SongCodeCompiler.h"
 #include "ClickSettingsKnobRack.h"
+#include "PipSequencer.h"
 
 //==============================================================================
 /**
@@ -32,6 +33,7 @@ private:
     // access the processor object that created it.
     BugsoundsAudioProcessor& audioProcessor;
 
+    PipSequencer pipSequencer;
     SongcodeEditor frequencyEditor;
     juce::TextButton testButton;
     ClickSettingsKnobRack clickSettingsRack; 

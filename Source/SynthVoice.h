@@ -256,6 +256,7 @@ private:
         }
     }
 
+
     float renderActiveClicks() {
         float output = 0.0;
 
@@ -285,12 +286,6 @@ private:
         float freqRandomnessAmount = *apvts->getRawParameterValue("Click Pitch Random");   //val from 0 to 1, representing how random it should be
         float freqRandomOffset = ((rng.nextFloat() * 2.0f) - 1.0f) * freqRandomnessAmount;
         float frequencyMultiplier = std::pow(2.0f, freqRandomOffset);
-
-        ////calculate new random offset for next click's phase
-        //float offsetScalar = *apvts->getRawParameterValue("Click Timing Random"); //0.0 to 1.0
-        //float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax;
-        //timingOffset = randomOffset * offsetScalar;
-        //juce::Logger::writeToLog("New offset:" + std::to_string(timingOffset));
 
         float baseLevel = 1.f;
         float levelRandomnessAmount = *apvts->getRawParameterValue("Click Volume Random");

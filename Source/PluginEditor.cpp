@@ -18,6 +18,7 @@ BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor (BugsoundsAudioProc
     testButton.setButtonText("Play song from code");
     testButton.onClick = [this] { freqCodeEditorHasChanged(); };
     addAndMakeVisible(testButton);
+    addAndMakeVisible(pipSequencer);
 
     addAndMakeVisible(clickSettingsRack);
     setSize(800, 400);
@@ -48,6 +49,8 @@ void BugsoundsAudioProcessorEditor::resized()
     // leftArea = leftArea.reduced(5);
 
     // Left half for text editors and button
+    auto pipSequencerHeight = 200;
+    pipSequencer.setBounds(leftArea.removeFromTop(pipSequencerHeight));
     testButton.setBounds(leftArea.removeFromBottom(30));
     leftArea.removeFromBottom(5);
     frequencyEditor.setBounds(leftArea);
@@ -55,13 +58,14 @@ void BugsoundsAudioProcessorEditor::resized()
     // Right half for controls
     auto rackHeight = 120;
     clickSettingsRack.setBounds(area.removeFromTop(rackHeight));
+    
 
     // Space for additional controls below the rack
     area.removeFromTop(5);  // Add some spacing after the rack
 }
 
 
-//if this doesn't work implement a fifo queue for transferring the string
+//if this doesn't work implement a fifo queue for transferring the string w/out locks
 void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
     juce::String songcode = frequencyEditor.getText();
     std::string freqStatusMsg;
