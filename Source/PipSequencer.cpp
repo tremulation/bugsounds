@@ -73,9 +73,127 @@ void PipSequencer::resized() {
 
 
 
-std::vector<Pip> getPips() {
-    return {};
+std::vector<Pip> PipSequencer::getPips() {
+    //dont actually copy the pipbars, just get pointers
+    const std::vector<std::unique_ptr<PipBar>>& bars = sequenceBox->pipBars;
+    std::vector<Pip> pips = {};
+    pips.reserve(bars.size());
+
+    for (const auto& bar : bars) {
+        if (bar) {
+            pips.push_back(Pip(bar->ourPip));
+        }
+    }
+    logPips(pips);
+    return pips;
 }
+
+
+void PipSequencer::logPips(const std::vector<Pip> pips) {
+    for (size_t i = 0; i < pips.size(); i++) {
+        const auto& pip = pips[i];
+        juce::String pipString = "Pip " + juce::String(i) + ": ";
+
+        // Frequency (Hz/kHz)
+        if (pip.frequency >= 1000.0f) {
+            int kHzValue = static_cast<int>(std::round(pip.frequency / 1000.0f));
+            pipString += juce::String(kHzValue) + "kHz, ";
+        }
+        else {
+            int hzValue = static_cast<int>(std::round(pip.frequency));
+            pipString += juce::String(hzValue) + "Hz, ";
+        }
+
+        // Length (탎/ms)
+        if (pip.length < 100) {
+            int usValue = static_cast<int>(std::round(pip.length));
+            pipString += juce::String(usValue) + "탎, ";
+        }
+        else {
+            int msValue = static_cast<int>(std::round(pip.length / 1000.0f));
+            pipString += juce::String(msValue) + "ms, ";
+        }
+
+        // Tail (탎/ms)
+        if (pip.tail < 100) {
+            int usValue = static_cast<int>(std::round(pip.tail));
+            pipString += juce::String(usValue) + "탎, ";
+        }
+        else {
+            int msValue = static_cast<int>(std::round(pip.tail / 1000.0f));
+            pipString += juce::String(msValue) + "ms, ";
+        }
+
+        // Level (percentage)
+        pipString += juce::String(std::round(pip.level * 100)) + "%";
+
+        juce::Logger::writeToLog(pipString);
+    }
+
+    // Log total count
+    juce::Logger::writeToLog("Total pips: " + juce::String(pips.size()));
+}
+
+
+void PipSequencer::createInlineEditor(PipBar::PipBarArea* pba, juce::Point<int> position) {
+    //convert pos from pipbar's coordinate space to pipsequencer's coordinate space
+    auto editorPos = pba->localPointToGlobal(position);
+    editorPos = getLocalPoint(nullptr, editorPos);
+
+    inlineEditor = std::make_unique<juce::TextEditor>();
+    addAndMakeVisible(inlineEditor.get());
+
+    //setup inline editor appearance
+    inlineEditor->setText(juce::String(pba->getValue(), 2));
+    inlineEditor->setJustification(juce::Justification::centred);
+    inlineEditor->setColour(juce::TextEditor::backgroundColourId, getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+    inlineEditor->setColour(juce::TextEditor::outlineColourId, juce::Colours::white);
+    inlineEditor->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::white);
+
+    //position above click point
+    const int editorWidth = 60;
+    const int editorHeight = 20;
+    editorPos = editorPos.withY(editorPos.getY() - editorHeight - 5);  //5px gap
+
+    //keep editor within component bounds
+    int minX = 0;
+    int maxX = getWidth() - editorWidth;
+    int minY = 0;
+    int maxY = getHeight() - editorHeight;
+
+    if (minX > maxX) {
+        std::swap(minX, maxX);
+    }
+    if (minY > maxY) {
+        std::swap(minY, maxY);
+    }
+
+    editorPos.setX(juce::jlimit(minX, maxX, editorPos.getX()));
+    editorPos.setY(juce::jlimit(minY, maxY, editorPos.getY()));
+
+    inlineEditor->setBounds(editorPos.getX(), editorPos.getY(), editorWidth, editorHeight);
+    
+
+    //set up editor behavior
+    inlineEditor->setSelectAllWhenFocused(true);
+    inlineEditor->setInputRestrictions(0, "0123456789.-");  //only numbs
+    inlineEditor->grabKeyboardFocus();
+
+    //enter key
+    inlineEditor->onReturnKey = [this, pba] {
+        pba->applyInlineEditorValue(inlineEditor->getText());
+        inlineEditor = nullptr;
+    };
+
+    //focus lost
+    inlineEditor->onFocusLost = [this, pba] {
+        pba->applyInlineEditorValue(inlineEditor->getText());
+        inlineEditor = nullptr;
+    };
+}
+
+
+
 
 
 //----------------------------========== Sequence Box ==========----------------------------\\
@@ -166,7 +284,6 @@ PipBar::~PipBar() = default;
 void PipBar::resized() {
     auto bounds = getLocalBounds();
     //reserve space for text at the top
-    const int textHoldingBoxHeight = 20;
     pipBarArea.setBounds(bounds);
     pipBarArea.maxHeight = pipBarArea.getHeight() - pipValueLabelHeight;
 }
@@ -205,7 +322,7 @@ juce::String PipBar::getFormattedValue() const {
         //switch from Hz to kHz if you feel like it I guess
         if (ourPip.frequency >= 1000.0f) {
             float kHzValue = ourPip.frequency / 1000.0f;
-            return juce::String(kHzValue, 1) + "kHz";
+            return juce::String(kHzValue, 2) + "kHz";
         } else {
             int hzValue = static_cast<int>(std::round(ourPip.frequency));
             return juce::String(hzValue) + "Hz";
@@ -257,12 +374,27 @@ void PipBar::PipBarArea::resized() {
 }
 
 
-void PipBar::PipBarArea::paint(juce::Graphics& g) {
+void PipBar::PipBarArea::paint(juce::Graphics& g)
+{
     auto bounds = getLocalBounds();
+    const int outlineThickness = 2;
+    const int minHeight = outlineThickness;  //min height so border is always visible
 
-    // Draw the bar
+    //calculate bar bounds, ensuring minheight at least
+    auto barBounds = juce::Rectangle<int>(
+        bounds.getX(),
+        bounds.getBottom() - std::max(barHeight, minHeight),
+        bounds.getWidth(),
+        std::max(barHeight, minHeight)
+    );
+
+    //outline
+    g.setColour(juce::Colours::blue.darker(0.2f));
+    g.fillRect(barBounds);
+
+    //main bar (slightly inset)
     g.setColour(juce::Colours::blue);
-    g.fillRect(bounds.getX(), bounds.getBottom() - barHeight, bounds.getWidth(), barHeight);
+    g.fillRect(barBounds.reduced(outlineThickness));
 }
 
 
@@ -277,22 +409,80 @@ void PipBar::PipBarArea::updateBarHeight() {
 
 void PipBar::PipBarArea::mouseDown(const juce::MouseEvent& e) {
     //TODO maybe apply a highlight here?
-    isDragging = true;
 }
 
 
 void PipBar::PipBarArea::mouseDrag(const juce::MouseEvent& e) {
-    if (isDragging) {
-        auto bounds = getLocalBounds();
-        //TODO handle different active vals
-        float normalizedValue = 1.0f - ((float)(e.y - 20) / (maxHeight));
-        normalizedValue = juce::jlimit(0.0f, 1.0f, normalizedValue);
+    auto bounds = getLocalBounds();
+    //TODO handle different active vals
+    float normalizedValue = 1.0f - ((float)(e.y - 20) / (maxHeight));
+    normalizedValue = juce::jlimit(0.0f, 1.0f, normalizedValue);
 
-        //convert normalized value to frequency (logarithmic scale)
-        float newFreq = std::exp(normalizedValue * (std::log(PipConstants::MAX_FREQUENCY) - std::log(PipConstants::MIN_FREQUENCY)) + std::log(PipConstants::MIN_FREQUENCY));
-        parentBar.ourPip.frequency = newFreq;
-        repaint();
-        parentBar.repaint();
+    //convert normalized value to frequency (logarithmic scale)
+    float newFreq = std::exp(normalizedValue * (std::log(PipConstants::MAX_FREQUENCY) - std::log(PipConstants::MIN_FREQUENCY)) + std::log(PipConstants::MIN_FREQUENCY));
+    parentBar.ourPip.frequency = newFreq;
+    repaint();
+    parentBar.repaint();
+}
+
+
+void PipBar::PipBarArea::mouseDoubleClick(const juce::MouseEvent& e) {
+    //this nonsense is necessary to draw the inline editor box over everything else in the pip sequencer
+    PipSequencer* ps = findParentComponentOfClass<PipBar>()->
+        findParentComponentOfClass<SequenceBox>()->
+        findParentComponentOfClass<PipSequencer>();
+
+    ps->createInlineEditor(this, e.getPosition());
+}
+
+
+float PipBar::PipBarArea::getValue() {
+    struct Pip parentPip = parentBar.ourPip;
+    switch (parentBar.mode) {
+        case FREQUENCY:
+            return parentPip.frequency;
+        case LENGTH:
+            return parentPip.length;
+        case TAIL:
+            return parentPip.tail;
+        case LEVEL:
+            return parentPip.level;
+        default:
+            return -99;
     }
 }
 
+
+void PipBar::PipBarArea::applyInlineEditorValue(juce::String rawInput) {
+    //parentBar.ourPip;
+    float newValue = rawInput.getFloatValue();
+    
+    switch (parentBar.mode) {
+        case FREQUENCY:
+            parentBar.ourPip.frequency = juce::jlimit(PipConstants::MIN_FREQUENCY, 
+                                                      PipConstants::MAX_FREQUENCY, 
+                                                      newValue);
+            repaint();
+            parentBar.repaint();
+        case LENGTH:
+            parentBar.ourPip.length = juce::jlimit(PipConstants::MIN_LENGTH,
+                                                   PipConstants::MAX_LENGTH,
+                                                   juce::roundToInt(newValue));
+            repaint();
+            parentBar.repaint();
+        case TAIL:
+            parentBar.ourPip.tail = juce::jlimit(PipConstants::MIN_TAIL,
+                                                 PipConstants::MAX_TAIL,
+                                                 juce::roundToInt(newValue));
+            repaint();
+            parentBar.repaint();
+        case LEVEL:
+            parentBar.ourPip.level = juce::jlimit(PipConstants::MIN_LEVEL,
+                                                  PipConstants::MAX_LEVEL,
+                                                  newValue);
+            repaint();
+            parentBar.repaint();
+        default:
+            return;
+    }
+}

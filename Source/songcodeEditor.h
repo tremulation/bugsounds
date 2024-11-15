@@ -30,5 +30,5 @@ class SongcodeEditor : public juce::Component
         juce::TextEditor mainEditor;
         juce::Label errorLabel;
 
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SongcodeEditor);
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SongcodeEditor)
 };

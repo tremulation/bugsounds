@@ -16,7 +16,7 @@ BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor (BugsoundsAudioProc
 {
     addAndMakeVisible(frequencyEditor);
     testButton.setButtonText("Play song from code");
-    testButton.onClick = [this] { freqCodeEditorHasChanged(); };
+    testButton.onClick = [this] { freqCodeEditorHasChanged(); pipSequencer.getPips(); };
     addAndMakeVisible(testButton);
     addAndMakeVisible(pipSequencer);
 

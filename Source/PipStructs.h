@@ -18,9 +18,18 @@ struct Pip {
     int  tail;          // microseconds
     float level;            // 0 to 1
 
-    Pip() : frequency(998.1f), length(1000000), tail(500000), level(0.5f) {}
+
+    Pip() : frequency(3520.0f), length(1000000), tail(500000), level(0.5f) {}
+
+
     Pip(float f, int l, int t, float lv)
         : frequency(f), length(l), tail(t), level(lv) {}
+
+
+    Pip(const Pip& other) = default;
+
+
+    Pip& operator=(const Pip& other) = default;
 };
 
 namespace PipConstants {

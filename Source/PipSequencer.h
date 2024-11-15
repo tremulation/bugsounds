@@ -11,40 +11,15 @@
 
 
 class PipBar;
-class PaddedPipBar;
+struct PipBarArea;
 class SequenceBox;
 
 
-const float pipWidth = 30.0f;
-const float pipSpacing = 30.0f;
+const float pipWidth = 40.0f;
+const float pipSpacing = 20.0f;
 const int scrollBarHeight = 10;
 const int buttonRowHeight = 20;
 const int pipValueLabelHeight = 20;
-
-//the main UI component that contains all the different elements of the pip sequencer
-class PipSequencer : public juce::Component
-{
-public:
-    PipSequencer();
-    ~PipSequencer() override;
-
-    void paint(juce::Graphics&) override;
-    void resized() override;
-    std::vector<Pip> getPips();
-
-    enum EditingMode mode = EditingMode::FREQUENCY;
-private:
-    juce::Label titleLabel;
-    //addbutton should go in the sequenceBox -- at the end
-    /*juce::TextButton addButton;*/
-
-    std::unique_ptr<SequenceBox> sequenceBox; //container for pip bars
-    std::unique_ptr<juce::TextEditor> inlineEditor; //this is the little text box that appears when you double click
-    std::unique_ptr<juce::Viewport> viewport;   //horizontal scrolling on pips when they overflow
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PipSequencer)
-};
-
 
 
 //a bar representing a single pip. It can be edited to change the properties of the pip it corresponds to.
@@ -59,7 +34,6 @@ public:
     struct Pip ourPip;
     
 
-private:
     //inner class that handles all mouse events, and draws the bar
     struct PipBarArea : public juce::Component {
         PipBarArea(PipBar& parent);
@@ -68,23 +42,55 @@ private:
         int barHeight;  //in pixels
         int maxHeight = 0;
         void updateBarHeight();
+        float getValue();
 
         //mouse events
         void mouseDrag(const juce::MouseEvent& e);
         void mouseDown(const juce::MouseEvent& e);
+        void mouseDoubleClick(const juce::MouseEvent& e);
+        void applyInlineEditorValue(juce::String rawInput);
     private:
         bool isDragging = false;
-        
         PipBar& parentBar;
     };
+
     PipBarArea pipBarArea;
-    
-    juce::String getFormattedValue() const;  
+private:
+
+    juce::String getFormattedValue() const;
 };
 
 
+
+//the main UI component that contains all the different elements of the pip sequencer
+class PipSequencer : public juce::Component
+{
+public:
+    PipSequencer();
+    ~PipSequencer() override;
+
+    void paint(juce::Graphics&) override;
+    void resized() override;
+    std::vector<Pip> getPips();
+    void logPips(const std::vector<Pip> pips);
+    void createInlineEditor(PipBar::PipBarArea* pba, juce::Point<int> position);
+
+    enum EditingMode mode = EditingMode::FREQUENCY;
+private:
+
+    juce::Label titleLabel;
+    std::unique_ptr<SequenceBox> sequenceBox; //container for pip bars
+    std::unique_ptr<juce::TextEditor> inlineEditor; //this is the little text box that appears when you double click
+    std::unique_ptr<juce::Viewport> viewport;   //horizontal scrolling on pips when they overflow
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PipSequencer)
+};
+
+
+
+
 //this contains all the pip bars, as well as the button for adding more pips
-class SequenceBox : public juce::Component 
+class SequenceBox : public juce::Component
 {
 public:
     SequenceBox(PipSequencer& p); //why does c++ do constructors like this. it is so weird!
@@ -96,7 +102,7 @@ public:
 
     std::vector<std::unique_ptr<PipBar>> pipBars;
 private:
-    
+
     juce::TextButton addButton;
 
     PipSequencer& parent;
@@ -105,3 +111,8 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SequenceBox)
 };
+
+
+
+
+
