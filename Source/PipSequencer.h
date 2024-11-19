@@ -50,13 +50,11 @@ public:
 
             // Draw borders on three sides only (left, top, right)
             g.setColour(juce::Colours::white);
-            g.drawLine(bounds.getX(), bounds.getY(), bounds.getX(), bounds.getBottom()); // left
-            g.drawLine(bounds.getX(), bounds.getY(), bounds.getRight(), bounds.getY()); // top
-            g.drawLine(bounds.getRight(), bounds.getY(), bounds.getRight(), bounds.getBottom()); // right
+            g.drawRect(bounds, 1.0f);
 
             // Extend the fill slightly below to cover the border of the sequenceBox
             g.setColour(baseColour);
-            g.fillRect(bounds.getX(), bounds.getBottom() - 1, bounds.getWidth(), 2.0f);
+            g.fillRect(bounds.getX() + 1, bounds.getBottom() - 1, bounds.getWidth() - 2, 2.0f);
         }
         else {
             // Unselected tab appearance

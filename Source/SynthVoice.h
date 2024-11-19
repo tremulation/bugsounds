@@ -11,6 +11,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "SynthSound.h"
+#include "PipStructs.h"
 #include "PluginProcessor.h"
 #include "SongCodeCompiler.h"
 
@@ -112,7 +113,12 @@ public:
         if (!playing) return;
 
         while (--numSamples >= 0) {
-            //should we place an impulse on this sample?
+            // IMPULSES  --  should we place an impulse on this sample?
+            // Explanation of all the factors that determine the target phase:
+            //      1.0 -- phase is 0 to 1, so this is the normal place a click would begin
+            //      patternPhaseDivisor -- Patterns allow us to create subdivisions of the current click,
+            //          and the subdivision of the current max corresponds to that
+            //      timingOffset -- a randomly generated offset that scales with the timing randomness parameter
             if (phase >= ((1.0 / patternPhaseDivisor) + timingOffset)) {
                 if (beatPattern[patternIndex] != 0) {
                     startNewClick();
@@ -136,6 +142,7 @@ public:
                 }
 
                 //calculate new random offset for next click's phase
+                //offset will be in range (-timingOffestMax * offsetScalar, timingOffsetMax * offsetScalar)
                 float offsetScalar = *apvts->getRawParameterValue("Click Timing Random"); //0.0 to 1.0
                 float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax; 
                 timingOffset = (randomOffset * offsetScalar) * (1.0 / patternPhaseDivisor);
@@ -198,7 +205,7 @@ private:
     bool playing = false;
     int samplesRemainingInNote = 0; 
 
-    //impulse state
+    //first layer impulse state
     double phase = 0.0;
     double phaseDelta = 0.0;
     double deltaChangePerSample = 0.0;
