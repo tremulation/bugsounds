@@ -26,27 +26,54 @@ const int ANIMATION_INTERVAL = 15;  //ms between frames
 const float ANIMATION_SPEED = 0.3f; //how much to move target between frames.
 const int DEFAULT_TEXT_HEIGHT = 12;
 
-// Add this class to handle square corners
-class SquareLookAndFeel : public juce::LookAndFeel_V4 {
+class TabStyleLookAndFeel : public juce::LookAndFeel_V4 {
 public:
+    TabStyleLookAndFeel() {
+        setColour(juce::TextButton::buttonColourId, juce::Colours::grey);
+    }
+
     void drawButtonBackground(juce::Graphics& g, juce::Button& button,
         const juce::Colour& backgroundColour,
         bool shouldDrawButtonAsHighlighted,
-        bool shouldDrawButtonAsDown) override {
+        bool shouldDrawButtonAsDown) override
+    {
         auto bounds = button.getLocalBounds().toFloat();
-        auto baseColour = backgroundColour.withMultipliedSaturation(button.hasKeyboardFocus(true) ? 1.3f : 0.9f)
-            .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f);
+        auto baseColour = backgroundColour;
 
-        if (shouldDrawButtonAsDown || button.getToggleState())
-            baseColour = baseColour.darker(0.2f);
-        else if (shouldDrawButtonAsHighlighted)
-            baseColour = baseColour.brighter(0.1f);
+        // Determine if button is selected
+        bool isSelected = button.getToggleState();
 
-        g.setColour(baseColour);
-        g.fillRect(bounds); // Use fillRect instead of fillRoundedRectangle
+        if (isSelected) {
+            // Selected tab appearance
+            g.setColour(baseColour);
+            g.fillRect(bounds);
 
-        g.setColour(button.findColour(juce::ComboBox::outlineColourId));
-        g.drawRect(bounds, 1.0f); // Use drawRect instead of drawRoundedRectangle
+            // Draw borders on three sides only (left, top, right)
+            g.setColour(juce::Colours::white);
+            g.drawLine(bounds.getX(), bounds.getY(), bounds.getX(), bounds.getBottom()); // left
+            g.drawLine(bounds.getX(), bounds.getY(), bounds.getRight(), bounds.getY()); // top
+            g.drawLine(bounds.getRight(), bounds.getY(), bounds.getRight(), bounds.getBottom()); // right
+
+            // Extend the fill slightly below to cover the border of the sequenceBox
+            g.setColour(baseColour);
+            g.fillRect(bounds.getX(), bounds.getBottom() - 1, bounds.getWidth(), 2.0f);
+        }
+        else {
+            // Unselected tab appearance
+            auto darkerColor = baseColour.darker(0.2f);
+
+            g.setColour(darkerColor);
+            g.fillRect(bounds);
+
+            // Draw all borders for unselected tabs
+            g.setColour(juce::Colours::white);
+            g.drawRect(bounds, 1.0f);
+
+            // Add subtle inner shadow for recessed effect
+            g.setColour(juce::Colours::black.withAlpha(0.1f));
+            g.drawHorizontalLine(1, bounds.getX() + 1, bounds.getRight() - 1);
+            g.drawVerticalLine(1, bounds.getY() + 1, bounds.getBottom() - 1);
+        }
     }
 };
 
@@ -131,7 +158,7 @@ private:
     std::unique_ptr<SequenceBox> sequenceBox; //container for pip bars
     std::unique_ptr<juce::TextEditor> inlineEditor; //this is the little text box that appears when you double click
     std::unique_ptr<juce::Viewport> viewport;   //horizontal scrolling on pips when they overflow
-    SquareLookAndFeel squareLookAndFeel;    //style for buttons
+    TabStyleLookAndFeel modeButtonLookAndFeel;    //style for buttons
 
     std::array<std::unique_ptr<juce::TextButton>, 4> modeButtons;
     void createModeButtons();

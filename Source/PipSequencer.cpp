@@ -51,6 +51,10 @@ void PipSequencer::paint(juce::Graphics& g) {
         titleBounds.getRight(),
         titleBounds.getBottom(),
         1.0f);
+
+    //draw border under mode buttons for tabs
+    auto modeButtonBounds = contentBounds.removeFromTop(buttonRowHeight - 5);
+    g.drawRect(modeButtonBounds, 1.0f);
 }
 
 
@@ -75,13 +79,13 @@ void PipSequencer::resized() {
     int totalSpacing = horizontalSpacing * 5; // Space before first, between each (3 spaces), and after last
     int buttonWidth = (buttonRow.getWidth() - totalSpacing) / 4;
 
-    // Add initial spacing
-    buttonRow.removeFromLeft(horizontalSpacing);
-
     // Position each button with spacing
+    juce::Font font(16.0f);
     for (int i = 0; i < 4; i++) {
-        modeButtons[i]->setBounds(buttonRow.removeFromLeft(buttonWidth));
-        buttonRow.removeFromLeft(horizontalSpacing); // Space after each button
+        int buttonPadding = 10;  //space to the sides of each text block
+        juce::String buttonText = modeButtons[i]->getButtonText();
+        auto textWidth = font.getStringWidth(buttonText);
+        modeButtons[i]->setBounds(buttonRow.removeFromLeft(buttonPadding * 2 + textWidth));
     }
 
     bounds.removeFromBottom(3); //scrollbar spacing
@@ -224,9 +228,10 @@ void PipSequencer::createModeButtons() {
         modeButtons[i]->setRadioGroupId(1); //mutually exclusive buttons
 
         //setup appearance
-        modeButtons[i]->setColour(juce::TextButton::buttonOnColourId, getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId).darker(0.3f));
-        modeButtons[i]->setColour(juce::TextButton::buttonColourId, getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-        modeButtons[i]->setLookAndFeel(&squareLookAndFeel); //rounded corners
+        auto sequenceBoxColor = getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId);
+        modeButtons[i]->setColour(juce::TextButton::buttonOnColourId, sequenceBoxColor);
+        modeButtons[i]->setColour(juce::TextButton::buttonColourId, sequenceBoxColor.darker(0.3f));
+        modeButtons[i]->setLookAndFeel(&modeButtonLookAndFeel); //rounded corners
         addAndMakeVisible(modeButtons[i].get());
 
         //setup click behavior
