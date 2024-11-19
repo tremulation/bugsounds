@@ -274,17 +274,40 @@ SequenceBox::SequenceBox(PipSequencer& p) : parent(p) {
 
     // Enable scrolling - using Viewport instead of direct scroll bars
     setWantsKeyboardFocus(true);
+
+    //for deleting, need keyboard input
+    addKeyListener(this);
 }
 
 
 SequenceBox::~SequenceBox() = default;
 
 
-void SequenceBox::paint(juce::Graphics& g) {
+void SequenceBox::paint(juce::Graphics& g)
+{
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-    g.setColour(juce::Colours::grey);
-    //g.drawRect(getLocalBounds());   //remove this outline later -- once everything is positioned correctly
+
+    if (selectedPipBar != nullptr)
+    {
+        //get the bounds of the selected PipBarArea
+        auto pipBarBounds = selectedPipBar->getBounds().toFloat();
+
+        //calculate the base area
+        auto highlightBounds = pipBarBounds.withTrimmedLeft((pipSpacing / 2) - 1).withTrimmedRight((pipSpacing / 2) - 1);
+        highlightBounds.removeFromTop(selectedPipBar->pipBarArea.maxHeight - selectedPipBar->pipBarArea.currentHeight + pipValueLabelHeight);
+
+        //draw drop shadow
+        juce::DropShadow dropShadow(juce::Colours::blue, 5, juce::Point<int>(0, 0));
+        dropShadow.drawForRectangle(g, highlightBounds.toNearestInt());
+
+        //draw a subtle outline
+        g.setColour(juce::Colours::blue.withAlpha(0.4f));
+        g.drawRect(highlightBounds, 1.0f);
+    }
 }
+
+
+
 
 
 void SequenceBox::resized() {
@@ -304,9 +327,49 @@ void SequenceBox::resized() {
 }
 
 
+
 int SequenceBox::getMinimumWidth() const {
     return (pipBars.size() * (pipWidth + pipSpacing) + pipSpacing * 3 );  // for add button and some padding
 }
+
+
+
+//draws each pip with the proper start coord
+//also handles padding to the left of the add button when there are no pips yet
+void SequenceBox::updatePipPositions() {
+    auto bounds = getLocalBounds();
+    bounds.removeFromBottom(scrollBarHeight);  // Reserve space for scrollbar
+
+    for (size_t i = 0; i < pipBars.size(); ++i) {
+        pipBars[i]->setBounds(i * (pipWidth + (pipSpacing)) + pipSpacing/2,
+            0,
+            pipWidth + pipSpacing/2,
+            bounds.getHeight());
+    }
+}
+
+
+
+//called by the pipbararea when it is clicked on
+void SequenceBox::setSelectedPipBar(PipBar* pipBar)
+{
+    juce::Logger::writeToLog("The previous selected bar was a: " + juce::String(selectedPipBar == nullptr ? "nullptr" : "valid pointer"));
+    if (selectedPipBar != pipBar)
+    {
+        if (selectedPipBar != nullptr)
+            selectedPipBar->setSelected(false);
+
+        selectedPipBar = pipBar;
+
+        if (selectedPipBar != nullptr)
+            selectedPipBar->setSelected(true);
+
+        repaint();
+        resized();
+    }
+}
+
+
 
 
 void SequenceBox::onAddButtonClicked() {
@@ -325,17 +388,37 @@ void SequenceBox::onAddButtonClicked() {
 }
 
 
-void SequenceBox::updatePipPositions() {
-    auto bounds = getLocalBounds();
-    bounds.removeFromBottom(scrollBarHeight);  // Reserve space for scrollbar
 
-    for (size_t i = 0; i < pipBars.size(); ++i) {
-        pipBars[i]->setBounds(i * (pipWidth + (pipSpacing)) + pipSpacing/2,
-            0,
-            pipWidth + pipSpacing/2,
-            bounds.getHeight());
+//handle deleting a pip with backspace or the delete key
+bool SequenceBox::keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent)
+{
+    if (selectedPipBar != nullptr && (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey))
+    {
+        deleteSelectedPipBar();
+        return true;
+    }
+    return false;
+}
+
+
+
+void SequenceBox::deleteSelectedPipBar()
+{
+    if (selectedPipBar != nullptr)
+    {
+        auto it = std::find_if(pipBars.begin(), pipBars.end(),
+            [this](const std::unique_ptr<PipBar>& pipBar) { return pipBar.get() == selectedPipBar; });
+
+        if (it != pipBars.end())
+        {
+            pipBars.erase(it);
+            selectedPipBar = nullptr;
+            resized();
+            repaint();
+        }
     }
 }
+
 
 
 //----------------------------============ Pip Bars ============----------------------------\\
@@ -353,7 +436,10 @@ PipBar::PipBar() : pipBarArea(*this){
 }
 
 
+
 PipBar::~PipBar() = default;
+
+
 
 void PipBar::resized() {
     auto bounds = getLocalBounds();
@@ -361,6 +447,7 @@ void PipBar::resized() {
     pipBarArea.setBounds(bounds);
     pipBarArea.maxHeight = pipBarArea.getHeight() - pipValueLabelHeight;
 }
+
 
 
 void PipBar::paint(juce::Graphics& g) {
@@ -382,10 +469,6 @@ void PipBar::paint(juce::Graphics& g) {
     if (textBounds.getHeight() < textHeight) {
         textBounds.setHeight(textHeight);
     }
-
-    // Rectangle
-    g.setColour(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-    g.fillRect(textBounds);
 
     // Text
     g.setFont(textHeight);
@@ -442,7 +525,7 @@ void PipBar::changeMode(enum EditingMode newMode) {
 
 
 PipBar::PipBarArea::PipBarArea(PipBar& parent) : parentBar(parent) { 
-    resized();
+    setWantsKeyboardFocus(true);
 }
 
 
@@ -523,10 +606,6 @@ void PipBar::PipBarArea::updateBarHeight() {
     //barHeight = std::round(heightPercent * maxHeight);
 }
 
-
-void PipBar::PipBarArea::mouseDown(const juce::MouseEvent& e) {
-    //TODO maybe apply a highlight here?
-}
 
 
 void PipBar::PipBarArea::mouseDrag(const juce::MouseEvent& e) {
@@ -681,5 +760,28 @@ void PipBar::PipBarArea::startHeightAnimation(float newTarget) {
     if (!isTimerRunning()) {
         currentHeight = barHeight;  // Start from current position
         startTimer(ANIMATION_INTERVAL);
+    }
+}
+
+
+void PipBar::PipBarArea::mouseDown(const juce::MouseEvent& e) {
+    SequenceBox* sq = parentBar.findParentComponentOfClass<SequenceBox>();
+    sq->setSelectedPipBar(&parentBar);
+    parentBar.setSelected(true);
+    grabKeyboardFocus();
+    repaint();
+}
+
+
+void PipBar::PipBarArea::focusLost(FocusChangeType cause) {
+    juce::Logger::writeToLog("The focusLost function was called");
+    
+    if (parentBar.selected) {
+        //deselect in parent
+        parentBar.setSelected(false);
+
+        //propogate deselection to the sequence box
+        SequenceBox* sq = parentBar.findParentComponentOfClass<SequenceBox>();
+        sq->setSelectedPipBar(nullptr);
     }
 }

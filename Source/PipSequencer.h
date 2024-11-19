@@ -60,11 +60,16 @@ public:
     void resized() override;
 
     enum EditingMode mode;  //set by sequencebox when a pip is created
-    struct Pip ourPip;
-    void changeMode(enum EditingMode newMode);
 
+    struct Pip ourPip;
+    
+    //for animations
     float currentTextHeight;
     float targetTextHeight;
+
+    void setSelected(bool isSelected) { selected = isSelected; repaint(); }
+    bool selected = true;
+    void changeMode(enum EditingMode newMode);
 
     //inner class that handles all mouse events, and draws the bar
     struct PipBarArea : public juce::Component, public juce::Timer {
@@ -81,6 +86,7 @@ public:
         void mouseDown(const juce::MouseEvent& e);
         void mouseDoubleClick(const juce::MouseEvent& e);
         void applyInlineEditorValue(juce::String rawInput);
+        void focusLost(FocusChangeType cause) override;
 
         //animation
         void startHeightAnimation(float newTarget);
@@ -90,6 +96,7 @@ public:
         float currentHeight;
         float targetHeight;
     private:
+        
         bool isDragging = false;
         bool isInitialized = false;
         PipBar& parentBar;
@@ -137,7 +144,7 @@ private:
 
 
 //this contains all the pip bars, as well as the button for adding more pips
-class SequenceBox : public juce::Component
+class SequenceBox : public juce::Component, public juce::KeyListener, public juce::MouseListener 
 {
 public:
     SequenceBox(PipSequencer& p); //why does c++ do constructors like this. it is so weird!
@@ -147,14 +154,19 @@ public:
     void resized() override;
     int getMinimumWidth() const;
 
+    void setSelectedPipBar(PipBar* pipBar);
+    bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
     std::vector<std::unique_ptr<PipBar>> pipBars;
 private:
-
-    juce::TextButton addButton;
-
     PipSequencer& parent;
-    void updatePipPositions();
+
+    //add and delete functionality
+    PipBar* selectedPipBar = nullptr;
+    void deleteSelectedPipBar();
+    juce::TextButton addButton;
     void onAddButtonClicked();
+
+    void updatePipPositions();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SequenceBox)
 };
