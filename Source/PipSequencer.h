@@ -15,11 +15,40 @@ struct PipBarArea;
 class SequenceBox;
 
 
+
 const float pipWidth = 40.0f;
 const float pipSpacing = 20.0f;
 const int scrollBarHeight = 10;
-const int buttonRowHeight = 20;
+const int buttonRowHeight = 30;
 const int pipValueLabelHeight = 20;
+
+const int ANIMATION_INTERVAL = 15;  //ms between frames
+const float ANIMATION_SPEED = 0.3f; //how much to move target between frames.
+const int DEFAULT_TEXT_HEIGHT = 12;
+
+// Add this class to handle square corners
+class SquareLookAndFeel : public juce::LookAndFeel_V4 {
+public:
+    void drawButtonBackground(juce::Graphics& g, juce::Button& button,
+        const juce::Colour& backgroundColour,
+        bool shouldDrawButtonAsHighlighted,
+        bool shouldDrawButtonAsDown) override {
+        auto bounds = button.getLocalBounds().toFloat();
+        auto baseColour = backgroundColour.withMultipliedSaturation(button.hasKeyboardFocus(true) ? 1.3f : 0.9f)
+            .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f);
+
+        if (shouldDrawButtonAsDown || button.getToggleState())
+            baseColour = baseColour.darker(0.2f);
+        else if (shouldDrawButtonAsHighlighted)
+            baseColour = baseColour.brighter(0.1f);
+
+        g.setColour(baseColour);
+        g.fillRect(bounds); // Use fillRect instead of fillRoundedRectangle
+
+        g.setColour(button.findColour(juce::ComboBox::outlineColourId));
+        g.drawRect(bounds, 1.0f); // Use drawRect instead of drawRoundedRectangle
+    }
+};
 
 
 //a bar representing a single pip. It can be edited to change the properties of the pip it corresponds to.
@@ -32,10 +61,13 @@ public:
 
     enum EditingMode mode;  //set by sequencebox when a pip is created
     struct Pip ourPip;
-    
+    void changeMode(enum EditingMode newMode);
+
+    float currentTextHeight;
+    float targetTextHeight;
 
     //inner class that handles all mouse events, and draws the bar
-    struct PipBarArea : public juce::Component {
+    struct PipBarArea : public juce::Component, public juce::Timer {
         PipBarArea(PipBar& parent);
         void paint(juce::Graphics&) override;
         void resized() override;
@@ -49,8 +81,17 @@ public:
         void mouseDown(const juce::MouseEvent& e);
         void mouseDoubleClick(const juce::MouseEvent& e);
         void applyInlineEditorValue(juce::String rawInput);
+
+        //animation
+        void startHeightAnimation(float newTarget);
+        void timerCallback() override;
+        bool isAnimating() const { return isTimerRunning();  }
+
+        float currentHeight;
+        float targetHeight;
     private:
         bool isDragging = false;
+        bool isInitialized = false;
         PipBar& parentBar;
     };
 
@@ -61,7 +102,7 @@ private:
 };
 
 
-
+//MAIN CLASS
 //the main UI component that contains all the different elements of the pip sequencer
 class PipSequencer : public juce::Component
 {
@@ -74,6 +115,7 @@ public:
     std::vector<Pip> getPips();
     void logPips(const std::vector<Pip> pips);
     void createInlineEditor(PipBar::PipBarArea* pba, juce::Point<int> position);
+    void updatePipBarModes(EditingMode newMode);
 
     enum EditingMode mode = EditingMode::FREQUENCY;
 private:
@@ -82,6 +124,11 @@ private:
     std::unique_ptr<SequenceBox> sequenceBox; //container for pip bars
     std::unique_ptr<juce::TextEditor> inlineEditor; //this is the little text box that appears when you double click
     std::unique_ptr<juce::Viewport> viewport;   //horizontal scrolling on pips when they overflow
+    SquareLookAndFeel squareLookAndFeel;    //style for buttons
+
+    std::array<std::unique_ptr<juce::TextButton>, 4> modeButtons;
+    void createModeButtons();
+    void clearModeButtonStates();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PipSequencer)
 };
@@ -111,6 +158,9 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SequenceBox)
 };
+
+
+
 
 
 

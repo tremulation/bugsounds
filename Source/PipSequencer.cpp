@@ -25,6 +25,9 @@ PipSequencer::PipSequencer() {
     viewport->setViewedComponent(sequenceBox.get(), false);
     viewport->setScrollBarsShown(false, true); //only need horizontal scroll bar
     addAndMakeVisible(viewport.get());
+
+    //setup editing mode buttons
+    createModeButtons();
 }
 
 
@@ -59,16 +62,35 @@ void PipSequencer::resized() {
     auto titleBounds = bounds.removeFromTop(titleHeight);
     titleLabel.setBounds(titleBounds.reduced(5, 0));
 
-    //Leave space for buttons at the top by removing buttonRowHeight
-    bounds.removeFromTop(buttonRowHeight);
+    //position mode buttons with spacing
+    auto buttonRow = bounds.removeFromTop(buttonRowHeight);
+    const int horizontalSpacing = 5;  // Space between and around buttons
+    const int verticalSpacing = 5;    // Space above and below buttons
+
+    // Remove vertical spacing
+    buttonRow.removeFromTop(verticalSpacing);
+    buttonRow.removeFromBottom(verticalSpacing);
+
+    // Calculate button width accounting for all spaces
+    int totalSpacing = horizontalSpacing * 5; // Space before first, between each (3 spaces), and after last
+    int buttonWidth = (buttonRow.getWidth() - totalSpacing) / 4;
+
+    // Add initial spacing
+    buttonRow.removeFromLeft(horizontalSpacing);
+
+    // Position each button with spacing
+    for (int i = 0; i < 4; i++) {
+        modeButtons[i]->setBounds(buttonRow.removeFromLeft(buttonWidth));
+        buttonRow.removeFromLeft(horizontalSpacing); // Space after each button
+    }
+
     bounds.removeFromBottom(3); //scrollbar spacing
 
-    //position viewport below the title and buttons
+    //position viewport below the buttons
     viewport->setBounds(bounds.reduced(1, 0));
 
     //set sequence box size, keeping original height
-    sequenceBox->setSize(sequenceBox->getMinimumWidth(), bounds.getHeight() - scrollBarHeight);  // Leave room for scrollbar
-   
+    sequenceBox->setSize(sequenceBox->getMinimumWidth(), bounds.getHeight() - scrollBarHeight);
 }
 
 
@@ -94,10 +116,9 @@ void PipSequencer::logPips(const std::vector<Pip> pips) {
         const auto& pip = pips[i];
         juce::String pipString = "Pip " + juce::String(i) + ": ";
 
-        // Frequency (Hz/kHz)
         if (pip.frequency >= 1000.0f) {
-            int kHzValue = static_cast<int>(std::round(pip.frequency / 1000.0f));
-            pipString += juce::String(kHzValue) + "kHz, ";
+            float kHzValue = pip.frequency / 1000.0f;
+            pipString += juce::String(kHzValue, 2) + "kHz, ";
         }
         else {
             int hzValue = static_cast<int>(std::round(pip.frequency));
@@ -110,8 +131,8 @@ void PipSequencer::logPips(const std::vector<Pip> pips) {
             pipString += juce::String(usValue) + "탎, ";
         }
         else {
-            int msValue = static_cast<int>(std::round(pip.length / 1000.0f));
-            pipString += juce::String(msValue) + "ms, ";
+            float msValue = pip.length / 1000.0f;
+            pipString += juce::String(msValue, 2) + "ms, ";
         }
 
         // Tail (탎/ms)
@@ -120,7 +141,7 @@ void PipSequencer::logPips(const std::vector<Pip> pips) {
             pipString += juce::String(usValue) + "탎, ";
         }
         else {
-            int msValue = static_cast<int>(std::round(pip.tail / 1000.0f));
+            int msValue = pip.tail / 1000.0f;
             pipString += juce::String(msValue) + "ms, ";
         }
 
@@ -193,6 +214,53 @@ void PipSequencer::createInlineEditor(PipBar::PipBarArea* pba, juce::Point<int> 
 }
 
 
+void PipSequencer::createModeButtons() {
+    const std::array<const char*, 4> buttonLabels = {
+        "Frequency", "Length", "Tail", "Level"
+    };
+    for (int i = 0; i < 4; i++) {
+        modeButtons[i] = std::make_unique < juce::TextButton>(buttonLabels[i]);
+        modeButtons[i]->setClickingTogglesState(true);  //true to show active state
+        modeButtons[i]->setRadioGroupId(1); //mutually exclusive buttons
+
+        //setup appearance
+        modeButtons[i]->setColour(juce::TextButton::buttonOnColourId, getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId).darker(0.3f));
+        modeButtons[i]->setColour(juce::TextButton::buttonColourId, getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+        modeButtons[i]->setLookAndFeel(&squareLookAndFeel); //rounded corners
+        addAndMakeVisible(modeButtons[i].get());
+
+        //setup click behavior
+        modeButtons[i]->onClick = [this, i] {
+            clearModeButtonStates();
+            mode = static_cast<EditingMode>(i);
+            modeButtons[i]->setToggleState(true, juce::dontSendNotification);
+            updatePipBarModes(mode);    //propogate mode change to pipBars
+        };
+    }
+
+    //setup initial state
+    modeButtons[0]->setToggleState(true, juce::dontSendNotification);
+}
+
+
+void PipSequencer::clearModeButtonStates() {
+    for (int i = 0; i < 4; i++) {
+        if (static_cast<EditingMode>(i) != mode) {
+            modeButtons[i]->setToggleState(false, juce::dontSendNotification);
+        }
+    }
+}
+
+
+void PipSequencer::updatePipBarModes(EditingMode newMode) {
+    if (sequenceBox) {
+        for (auto& pipBar : sequenceBox->pipBars) {
+            if (pipBar) {
+                pipBar->changeMode(newMode);
+            }
+        }
+    }
+}
 
 
 
@@ -276,6 +344,12 @@ void SequenceBox::updatePipPositions() {
 PipBar::PipBar() : pipBarArea(*this){
     setWantsKeyboardFocus(true);
     addAndMakeVisible(pipBarArea);
+
+    //set up animation
+    //when the height of the bar changes, the height of the text should change as well
+    //all the animation for text/bar height is handled in the pipBarArea's timerCallback method
+    currentTextHeight = DEFAULT_TEXT_HEIGHT;
+    targetTextHeight = DEFAULT_TEXT_HEIGHT;
 }
 
 
@@ -293,24 +367,29 @@ void PipBar::paint(juce::Graphics& g) {
     auto bounds = getLocalBounds();
     /*g.drawRect(bounds, 1.0f);*/
     juce::String valueText = getFormattedValue();
-    int textHeight = 12;
+    int textHeight = DEFAULT_TEXT_HEIGHT;
 
     //calculate the text bounds to ensure it's not clipped
     pipBarArea.updateBarHeight();
-    //fix text bounds to the top
-    auto textBounds = bounds.removeFromTop(bounds.getHeight() - pipBarArea.barHeight);
+
+
+    // Calculate text bounds based on current animated heights
+    float currentTotalHeight = pipBarArea.isAnimating() ?
+        currentTextHeight + pipBarArea.currentHeight :
+        textHeight + pipBarArea.barHeight;
+
+    auto textBounds = bounds.removeFromTop(bounds.getHeight() - currentTotalHeight);
     if (textBounds.getHeight() < textHeight) {
         textBounds.setHeight(textHeight);
     }
-    
-    //rectangle
+
+    // Rectangle
     g.setColour(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
     g.fillRect(textBounds);
-    
-    //text
+
+    // Text
     g.setFont(textHeight);
     g.setColour(juce::Colours::white);
-    //g.drawRect(textBounds, 1.0f); //for testing
     g.drawText(valueText, textBounds, juce::Justification::centred);
 }
 
@@ -329,27 +408,21 @@ juce::String PipBar::getFormattedValue() const {
         }
 
     case LENGTH:
-        if (ourPip.length < 100) {
-            int usValue = static_cast<int>(std::round(ourPip.length));
-            return juce::String(usValue) + " 탎";
+    case TAIL: {
+        //same formatting for both time values
+        int timeVal = (mode == LENGTH) ? ourPip.length : ourPip.tail;
+        if (timeVal < 100) {  
+            //show microseconds w/ no decimal place
+            return juce::String(timeVal) + " us";
         }
         else {
-            int msValue = static_cast<int>(std::round(ourPip.length / 1000.0f));
-            return juce::String(msValue) + " ms";
+            //ms with two decimal places
+            float msVal = timeVal / 1000.f;
+            return juce::String(msVal, 2) + "ms";
         }
-        
-    case TAIL:
-        if (ourPip.tail < 100) {
-            int usValue = static_cast<int>(std::round(ourPip.tail));
-            return juce::String(usValue) + " 탎";
-        }
-        else {
-            int msValue = static_cast<int>(std::round(ourPip.tail / 1000.0f));
-            return juce::String(msValue) + " ms";
-        }
-
+    }
     case LEVEL:
-        return juce::String(std::to_string(ourPip.level * 100) + "%");
+        return juce::String(std::round(ourPip.level * 100)) + "%";
 
     default:
         return "";
@@ -357,11 +430,18 @@ juce::String PipBar::getFormattedValue() const {
 }
 
 
+
+void PipBar::changeMode(enum EditingMode newMode) {
+    mode = newMode;
+    repaint();
+    pipBarArea.repaint();
+}
+
+
 //----------------------------============ Pip Bar Area ============----------------------------\\
 
 
 PipBar::PipBarArea::PipBarArea(PipBar& parent) : parentBar(parent) { 
-    juce::Logger::writeToLog("Max height at initialization: " + std::to_string(maxHeight));
     resized();
 }
 
@@ -400,10 +480,47 @@ void PipBar::PipBarArea::paint(juce::Graphics& g)
 
 void PipBar::PipBarArea::updateBarHeight() {
     auto bounds = getLocalBounds();
-    //TODO handle different vals being edited 
-    float normalizedFreq = (std::log(parentBar.ourPip.frequency) - std::log(PipConstants::MIN_FREQUENCY)) / (std::log(PipConstants::MAX_FREQUENCY) - std::log(PipConstants::MIN_FREQUENCY));
-    barHeight = std::round(normalizedFreq * maxHeight);
+    
+    float heightPercent = 0.0f;
+    float tailValue;
+    switch (parentBar.mode) {
+    case FREQUENCY:
+        //log scaling for freq
+        heightPercent = (std::log(parentBar.ourPip.frequency) - std::log(PipConstants::MIN_FREQUENCY)) / 
+            (std::log(PipConstants::MAX_FREQUENCY) - std::log(PipConstants::MIN_FREQUENCY));
+        break;
+    case LENGTH:
+        //linear for length values
+        heightPercent = (std::log(static_cast<float>(parentBar.ourPip.length)) - std::log(static_cast<float>(PipConstants::MIN_LENGTH))) /
+            (std::log(static_cast<float>(PipConstants::MAX_LENGTH)) - std::log(static_cast<float>(PipConstants::MIN_LENGTH)));
+        break;
+    case TAIL: 
+        
+        tailValue = std::max(static_cast<float>(parentBar.ourPip.tail), 1.0f);  //ensure we don't take log of 0
+        heightPercent = (std::log(tailValue) - std::log(1.0f)) /
+            (std::log(static_cast<float>(PipConstants::MAX_TAIL)) - std::log(1.0f));
+        if (parentBar.ourPip.tail == 0) heightPercent = 0.0f;  //force to 0 if tail is 0
+        break;
+    case LEVEL:
+        //and linear for volume
+        heightPercent = (parentBar.ourPip.level - PipConstants::MIN_LEVEL) /
+            (PipConstants::MAX_LEVEL - PipConstants::MIN_LEVEL);
+        break;
+    }
 
+    float newHeight = std::round(heightPercent * maxHeight);
+
+    if (!isInitialized) {
+        barHeight = newHeight;
+        currentHeight = newHeight;
+        targetHeight = newHeight;
+        isInitialized = true;
+    }
+    else {
+        startHeightAnimation(newHeight);
+    }
+    
+    //barHeight = std::round(heightPercent * maxHeight);
 }
 
 
@@ -414,13 +531,53 @@ void PipBar::PipBarArea::mouseDown(const juce::MouseEvent& e) {
 
 void PipBar::PipBarArea::mouseDrag(const juce::MouseEvent& e) {
     auto bounds = getLocalBounds();
-    //TODO handle different active vals
+    
+    //convert mouse position on the bar to a percent
     float normalizedValue = 1.0f - ((float)(e.y - 20) / (maxHeight));
     normalizedValue = juce::jlimit(0.0f, 1.0f, normalizedValue);
 
-    //convert normalized value to frequency (logarithmic scale)
-    float newFreq = std::exp(normalizedValue * (std::log(PipConstants::MAX_FREQUENCY) - std::log(PipConstants::MIN_FREQUENCY)) + std::log(PipConstants::MIN_FREQUENCY));
-    parentBar.ourPip.frequency = newFreq;
+    //and then convert that position to a concrete value for the currently active parameter
+    switch (parentBar.mode) {
+        case FREQUENCY: {
+            //log scaling for velocity
+            float newFreq = std::exp(normalizedValue *
+                (std::log(PipConstants::MAX_FREQUENCY) - std::log(PipConstants::MIN_FREQUENCY)) +
+                std::log(PipConstants::MIN_FREQUENCY));
+            parentBar.ourPip.frequency = newFreq;
+            break;
+        }
+
+        case LENGTH: {
+            //log scaling for length
+            float newLength = std::exp(normalizedValue *
+                (std::log(static_cast<float>(PipConstants::MAX_LENGTH)) - std::log(static_cast<float>(PipConstants::MIN_LENGTH))) +
+                std::log(static_cast<float>(PipConstants::MIN_LENGTH)));
+            parentBar.ourPip.length = static_cast<int>(std::round(newLength));
+            break;
+        }
+
+        case TAIL: {
+            if (normalizedValue < 0.01f) {
+                //handle zero tail
+                parentBar.ourPip.tail = 0;
+            }
+            else {
+                //log scaling for non-zero tail values
+                float newTail = std::exp(normalizedValue *
+                    (std::log(static_cast<float>(PipConstants::MAX_TAIL)) - std::log(1.0f)) +
+                    std::log(1.0f));
+                parentBar.ourPip.tail = static_cast<int>(std::round(newTail));
+            }
+            break;
+        }
+
+        case LEVEL: {
+            //linear for level
+            parentBar.ourPip.level = normalizedValue;
+            break;
+        }
+    }
+
     repaint();
     parentBar.repaint();
 }
@@ -464,25 +621,65 @@ void PipBar::PipBarArea::applyInlineEditorValue(juce::String rawInput) {
                                                       newValue);
             repaint();
             parentBar.repaint();
+            return;
         case LENGTH:
             parentBar.ourPip.length = juce::jlimit(PipConstants::MIN_LENGTH,
                                                    PipConstants::MAX_LENGTH,
                                                    juce::roundToInt(newValue));
             repaint();
             parentBar.repaint();
+            return;
         case TAIL:
             parentBar.ourPip.tail = juce::jlimit(PipConstants::MIN_TAIL,
                                                  PipConstants::MAX_TAIL,
                                                  juce::roundToInt(newValue));
             repaint();
             parentBar.repaint();
+            return;
         case LEVEL:
             parentBar.ourPip.level = juce::jlimit(PipConstants::MIN_LEVEL,
                                                   PipConstants::MAX_LEVEL,
                                                   newValue);
             repaint();
             parentBar.repaint();
+            return;
         default:
             return;
+    }
+}
+
+
+void PipBar::PipBarArea::timerCallback() {
+    //calculate distance to move this frame
+    float barDiff = targetHeight - currentHeight;
+    float barStep = barDiff * ANIMATION_SPEED;
+
+    //update parent text height
+    float textDiff = parentBar.targetTextHeight - parentBar.currentTextHeight;
+    float textStep = textDiff * ANIMATION_SPEED;
+    parentBar.currentTextHeight += textStep;
+
+    //update bar position
+    currentHeight += barStep;
+    barHeight = currentHeight;  //update the actual bar height
+
+    //stop if we're close enough to both targets
+    if (std::abs(barDiff) < 0.5f && std::abs(textDiff) < 0.5f) {
+        currentHeight = targetHeight;
+        barHeight = targetHeight;
+        parentBar.currentTextHeight = parentBar.targetTextHeight;
+        stopTimer();
+    }
+
+    parentBar.repaint();
+    repaint();
+}
+
+
+void PipBar::PipBarArea::startHeightAnimation(float newTarget) {
+    targetHeight = newTarget;
+    if (!isTimerRunning()) {
+        currentHeight = barHeight;  // Start from current position
+        startTimer(ANIMATION_INTERVAL);
     }
 }
