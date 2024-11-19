@@ -76,7 +76,7 @@ void PipSequencer::resized() {
     buttonRow.removeFromBottom(verticalSpacing);
 
     // Calculate button width accounting for all spaces
-    int totalSpacing = horizontalSpacing * 5; // Space before first, between each (3 spaces), and after last
+    int totalSpacing = horizontalSpacing * 5; //space before first, between each (3 spaces), and after last
     int buttonWidth = (buttonRow.getWidth() - totalSpacing) / 4;
 
     // Position each button with spacing
@@ -88,13 +88,13 @@ void PipSequencer::resized() {
         modeButtons[i]->setBounds(buttonRow.removeFromLeft(buttonPadding * 2 + textWidth));
     }
 
-    bounds.removeFromBottom(3); //scrollbar spacing
+    bounds.removeFromBottom(4); //space under scrollbar
 
     //position viewport below the buttons
     viewport->setBounds(bounds.reduced(1, 0));
 
     //set sequence box size, keeping original height
-    sequenceBox->setSize(sequenceBox->getMinimumWidth(), bounds.getHeight() - scrollBarHeight);
+    sequenceBox->setSize(sequenceBox->getMinimumWidth(), bounds.getHeight() - 4);   //second arg-- space btw scroll bar and pips
 }
 
 
@@ -358,7 +358,6 @@ void SequenceBox::updatePipPositions() {
 //called by the pipbararea when it is clicked on
 void SequenceBox::setSelectedPipBar(PipBar* pipBar)
 {
-    juce::Logger::writeToLog("The previous selected bar was a: " + juce::String(selectedPipBar == nullptr ? "nullptr" : "valid pointer"));
     if (selectedPipBar != pipBar)
     {
         if (selectedPipBar != nullptr)
@@ -380,7 +379,6 @@ void SequenceBox::setSelectedPipBar(PipBar* pipBar)
 void SequenceBox::onAddButtonClicked() {
     auto newPip = std::make_unique<PipBar>();
     newPip->mode = parent.mode;
-    juce::Logger::writeToLog("The editing mode is: " + std::to_string(parent.mode));
     addAndMakeVisible(newPip.get());
     pipBars.push_back(std::move(newPip));
 
@@ -779,8 +777,6 @@ void PipBar::PipBarArea::mouseDown(const juce::MouseEvent& e) {
 
 
 void PipBar::PipBarArea::focusLost(FocusChangeType cause) {
-    juce::Logger::writeToLog("The focusLost function was called");
-    
     if (parentBar.selected) {
         //deselect in parent
         parentBar.setSelected(false);
