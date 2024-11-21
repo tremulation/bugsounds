@@ -15,8 +15,7 @@ pattern(2 0 3 1), 120 250, 240 250, 360 167, 480 167, 600 167, 720 500, 0 500,
 pattern(rand(1 3) rand(0 2) rand(1 3)), 120 500, 240 500, 360 500, 0 500,
 
 ## combinations
-pattern(2 0), [rand(100 150) 500, rand(200 250) 500] rand(2 4), 0 500,
-120 1, rand(120 130) rand(500 600), [pattern(1 rand(0 3) 0 0), rand(120 130) 500, pattern(2 0 rand(1 5), rand(240 250) 500] rand(1 5), 0 500,
+pattern(2 0), [rand(100 150) 500, rand(200 250) 500] rand(2 4), 0 500, 120 1, rand(120 130) rand(500 600), [pattern(1 rand(0 3) 0 0), rand(120 130) 500, pattern(2 0 rand(1 5)), rand(240 250) 500] rand(1 5), 0 500,
 
 ## linked randoms
 lrand(a 200 1000) 1, lrand(a) 1

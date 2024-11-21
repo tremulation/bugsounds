@@ -12,6 +12,7 @@
 #include "SynthSound.h"
 #include "SynthVoice.h"
 #include "SongCodeCompiler.h"
+#include "PipStructs.h"
 
 //==============================================================================
 /**
@@ -69,6 +70,10 @@ public:
 
     juce::String getFrequencyCodeString() const {
         return frequencyCodeString;
+    }
+    
+    void setPipSequence(std::vector<Pip> pips) {
+        myVoice->setPipSequence(pips);
     }
 
 private:

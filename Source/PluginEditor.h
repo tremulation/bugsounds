@@ -37,13 +37,6 @@ private:
     SongcodeEditor frequencyEditor;
     juce::TextButton testButton;
     ClickSettingsKnobRack clickSettingsRack; 
-    
-
-    ////resonator settings
-    //juce::Slider resonatorQKnob;
-    //juce::Slider resonatorGainKnob;
-    //juce::Slider resonatorHarmonicsKnob;
-    //juce::ToggleButton resonatorOnButton;
 
     void freqCodeEditorHasChanged();
 

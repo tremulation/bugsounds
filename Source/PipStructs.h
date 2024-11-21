@@ -19,7 +19,7 @@ struct Pip {
     float level;            // 0 to 1
 
 
-    Pip() : frequency(3520.0f), length(100), tail(200), level(0.5f) {}
+    Pip() : frequency(3520.0f), length(100), tail(0), level(0.5f) {}
 
 
     Pip(float f, int l, int t, float lv)

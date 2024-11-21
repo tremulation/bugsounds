@@ -140,6 +140,8 @@ public:
                         patternPhaseDivisor = beatPattern[patternIndex];
                     }
                 }
+                //run second-layer subclick generation on all the clicks in activeClicks
+                updateActiveClicks();
 
                 //calculate new random offset for next click's phase
                 //offset will be in range (-timingOffestMax * offsetScalar, timingOffsetMax * offsetScalar)
@@ -147,6 +149,8 @@ public:
                 float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax; 
                 timingOffset = (randomOffset * offsetScalar) * (1.0 / patternPhaseDivisor);
             }
+
+
             //add the output of all the active clicks to the channels
             float clickOutput = renderActiveClicks();
             for (auto i = outputBuffer.getNumChannels(); --i >= 0;) {
@@ -187,6 +191,11 @@ public:
         songString = newSongString;
     }
 
+    void setPipSequence(std::vector<Pip> pips) {
+        pipSequence = pips;
+        juce::Logger::writeToLog("Pips received. First freq: " + juce::String(pipSequence[0].frequency));
+    }
+
     void setAPVTS(juce::AudioProcessorValueTreeState* apvtsPtr) {
         apvts = apvtsPtr;
     }
@@ -196,8 +205,7 @@ private:
     juce::Random rng;
     juce::AudioProcessorValueTreeState* apvts = nullptr;
     juce::String songString;
-
-    //declare random number generator here
+    std::vector<Pip> pipSequence;
 
     //song state
     std::vector<SongElement> song = {};
@@ -210,17 +218,32 @@ private:
     double phaseDelta = 0.0;
     double deltaChangePerSample = 0.0;
     double level;
+    //move randomness timing offset variables to second layer impulse state
     float timingOffset = 0.0;
-    float timingOffsetMax = .50;     // 10%
+    float timingOffsetMax = .50;     // 50% of normal click length
+
+    //second layer impulse state
+    double pipPhase = 0.0;
+    double pipPhaseDelta = 0.0;
+    double pipPhaseDeltaChangePerSample = 0.0;
 
     //click generator state
     struct Click {
+        int pos; //position of the next pip in the sequence
+        int samplesTilNextClick; //how long until the next pip starts
+        int subClicksRemaining;
+    };
+ 
+    struct SubClick {
         float frequency;
         int samplesRemaining;
         float phase;
         float level;
     };
+
     std::vector<Click> activeClicks;
+    std::vector<SubClick> activeSubClicks;
+
 
     //pattern state
     std::vector <uint8_t> beatPattern = { 1 };
@@ -266,9 +289,8 @@ private:
 
     float renderActiveClicks() {
         float output = 0.0;
-
         //process all the clicks the synth is currently playing
-        for (auto& click : activeClicks) {
+        for (auto& click : activeSubClicks) {
             output += std::sin(click.phase * 2.0f * juce::MathConstants<float>::pi) * click.level;
             click.phase += click.frequency / getSampleRate();
             if (click.phase >= 1.0f) click.phase -= 1.0f;
@@ -276,33 +298,90 @@ private:
         }
 
         //remove finished clicks
-        activeClicks.erase(
-            std::remove_if(activeClicks.begin(), activeClicks.end(),
-                [](const Click& click) { return click.samplesRemaining <= 0; }),
-            activeClicks.end()
+        activeSubClicks.erase(
+            std::remove_if(activeSubClicks.begin(), activeSubClicks.end(),
+                [](const SubClick& click) { return click.samplesRemaining <= 0; }),
+            activeSubClicks.end()
         );
         return output;
     }
 
-    void startNewClick() {
+
+    //TODO should I randomize things like pitch/level/length here, or in startNewSubClick
+    void startNewClick(){
         Click newClick;
+
+        //create first subclick
+        struct Pip firstPip = pipSequence[0];
+        startNewSubClick(firstPip.frequency, firstPip.length, firstPip.level);
+
+        //now set up the click state
+        newClick.pos = 1;   //already started first pip, go to second
+        newClick.samplesTilNextClick = firstPip.length - firstPip.tail;
+        if (newClick.samplesTilNextClick <= 0) {
+            newClick.samplesTilNextClick == 1;
+        }
+
+        activeClicks.push_back(newClick);
+    }
+
+
+    void startNewSubClick(float freq, int samples, float vol) {
+        SubClick newClick;
         //use the random number generator and the range from the parameters to change the frequency of this click
         //remember the range of the parameter is 0 (no randomness) to 1 (very random pitch)
         //at randomness = 1, the random value will have a range of (0, 2 * baseFreq)
-        float baseFreq = 3000.0f;
+        // ^ is that range right?
+        float baseFreq = freq;
         float freqRandomnessAmount = *apvts->getRawParameterValue("Click Pitch Random");   //val from 0 to 1, representing how random it should be
         float freqRandomOffset = ((rng.nextFloat() * 2.0f) - 1.0f) * freqRandomnessAmount;
         float frequencyMultiplier = std::pow(2.0f, freqRandomOffset);
 
-        float baseLevel = 1.f;
-        float levelRandomnessAmount = *apvts->getRawParameterValue("Click Volume Random");
+        float baseLevel = vol;
+        float levelRandomnessAmount = *apvts->getRawParameterValue("Click Volume Random");  //0 to 1 again
         float levelOffsetScalar = 1 - (rng.nextFloat() * levelRandomnessAmount);
         float randomizedLevel = baseLevel * levelOffsetScalar;
         
         newClick.frequency = baseFreq * frequencyMultiplier;
-        newClick.samplesRemaining = 100;
+        newClick.samplesRemaining = samples;
         newClick.phase = 0.0f;
         newClick.level = randomizedLevel;
-        activeClicks.push_back(newClick);
+        activeSubClicks.push_back(newClick);
     }
+
+
+    //handles turning the active clicks into subclicks
+    void updateActiveClicks() {
+        //process all the clicks
+        for (auto& click : activeClicks) {
+            //should we start a new click here?
+            if (click.samplesTilNextClick <= 0 && click.pos < pipSequence.size()) {
+                //start a new subclick with the next pip in the sequence
+                struct Pip nextPip = pipSequence[click.pos];
+                startNewSubClick(nextPip.frequency, nextPip.length, nextPip.level);
+
+                //update the click state to the next pip
+                click.pos++; 
+                if (click.pos < pipSequence.size()) {
+                    click.samplesTilNextClick = nextPip.length - nextPip.tail;
+                    if (click.samplesTilNextClick <= 0) {
+                        click.samplesTilNextClick = 1;
+                    }
+                }
+
+            }
+            else {  //no new subclick yet, just advance the click
+                click.samplesTilNextClick--;
+            }
+        }
+
+        //remove finished clicks with an iterator
+        activeClicks.erase(
+            std::remove_if(activeClicks.begin(), activeClicks.end(),
+                [size = pipSequence.size()](const Click& click) {return click.pos >= size; }),
+            activeClicks.end()
+        );
+    }
+
+
 };

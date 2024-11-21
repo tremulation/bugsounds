@@ -1,5 +1,5 @@
 
-The plan:
+## The plan:
 1. button pressed -> send song string and pip sequencer list to synthVoice through the thing
     - you can't change these during playback. they're static until a new song is started
     - it would be nice to be able to change the clicks during playback, but I'm not sure how I could accomplish that without locking the audio thread.
@@ -26,3 +26,70 @@ The plan:
     - if this note is over, then either setup the next note, or finish the song.
 4. renderActiveClicks(): generates the actual audio signal. Each time startNewClick is called, a new click is added to the array of active clicks. This function manages their state and plays each of them back. 
 5. startNewClick(): sets up a new click in the array of playing clicks. It first calculates random offsets for the click's frequency and level, and then adds it to the activeClicks array. 
+
+
+## Pseudocode for the main rendering function
+
+renderNextBlock()
+    for every sample i {
+        if the phase equals ((1.0 / patternPhaseDivisor) + timingOffset) 
+            {
+            add a new click to the activeClicks array (startNewClick)
+            set phase to 0
+            advance the pattern
+            set a new randon timingOffset
+            }
+        ** Run second-layer click generation here. 
+        render the currently-playing clicks (renderActiveClicks)
+        add the rendered audio of the clicks to the output buffer
+        advance the impulse generator 
+        advance the frequency of the currently-playing note 
+        if the current note is over
+        {
+            if the current song is over 
+            {
+                stop playing
+            } else
+            {   
+                play the next note in the song
+            }
+        }
+    }
+
+
+## second layer click generation:
+
+split the activeClicks into two arrays: activeClicks and activeSubClicks
+activeClicks stores the list of currently-playing clicks 
+
+```c++
+struct Click {
+    int pos; //position of the next pip in the sequence
+    int samplesTilNextClick //how long until the next pip starts
+    int subClicksRemaining;
+}
+
+//same as the old clicks 
+struct SubClick {
+    float frequency;
+    int samplesRemaining;   
+    float phase; 
+    float level;
+}
+
+std::vector<Click> activeClicks;
+std::vector<SubClick> activeSubClicks;
+```
+
+in renderNextBlock():
+
+```c++
+for (Click c : activeClicks){
+    if(c.samplesTilNextClick <= 0 && c.subClicksRemaining > 0) {
+        //start a new subClick with startNewSubClick
+    }
+    //remove any clicks that are finished. A click is finished if there are >= 0 samples remaining, and 0 subclicks remainign
+    samplesTilNextClick--;
+}
+```
+
