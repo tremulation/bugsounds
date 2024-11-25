@@ -104,13 +104,14 @@ void BugsoundsAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     juce::ignoreUnused(samplesPerBlock);    //clears out unused samples from last key press
     lastSampleRate = sampleRate;
     mySynth.setCurrentPlaybackSampleRate(lastSampleRate);
+    myVoice->prepareToPlay(sampleRate, samplesPerBlock);
 }
 
 void BugsoundsAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
- 
+    
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations

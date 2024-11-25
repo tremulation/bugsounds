@@ -35,10 +35,12 @@ private:
 
     PipSequencer pipSequencer;
     SongcodeEditor frequencyEditor;
+    SongcodeEditor resonatorEditor;
     juce::TextButton testButton;
     ClickSettingsKnobRack clickSettingsRack; 
 
     void freqCodeEditorHasChanged();
+    void resonatorCodeEditorHasChanged();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BugsoundsAudioProcessorEditor)
 };

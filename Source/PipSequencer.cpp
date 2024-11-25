@@ -72,7 +72,7 @@ void PipSequencer::resized() {
     const int verticalSpacing = 5;    // Space above and below buttons
 
     // Remove vertical spacing
-    buttonRow.removeFromTop(verticalSpacing);
+    // buttonRow.removeFromTop(verticalSpacing);
     buttonRow.removeFromBottom(verticalSpacing);
 
     // Calculate button width accounting for all spaces
@@ -132,7 +132,7 @@ void PipSequencer::logPips(const std::vector<Pip> pips) {
         // Length (탎/ms)
         if (pip.length < 100) {
             int usValue = static_cast<int>(std::round(pip.length));
-            pipString += juce::String(usValue) + "탎, ";
+            pipString += juce::String(usValue) + "us, ";
         }
         else {
             float msValue = pip.length / 1000.0f;
@@ -142,7 +142,7 @@ void PipSequencer::logPips(const std::vector<Pip> pips) {
         // Tail (탎/ms)
         if (pip.tail < 100) {
             int usValue = static_cast<int>(std::round(pip.tail));
-            pipString += juce::String(usValue) + "탎, ";
+            pipString += juce::String(usValue) + "us, ";
         }
         else {
             int msValue = pip.tail / 1000.0f;
@@ -220,13 +220,13 @@ void PipSequencer::createInlineEditor(PipBar::PipBarArea* pba, juce::Point<int> 
 
 void PipSequencer::createModeButtons() {
     const std::array<const char*, 4> buttonLabels = {
-        "Frequency", "Length", "Tail", "Level"
+        "Frequency", "Length", "Overlap", "Level"
     };
+    const juce::Font buttonFont("Arial", 16.0f, juce::Font::plain);
     for (int i = 0; i < 4; i++) {
         modeButtons[i] = std::make_unique < juce::TextButton>(buttonLabels[i]);
         modeButtons[i]->setClickingTogglesState(true);  //true to show active state
         modeButtons[i]->setRadioGroupId(1); //mutually exclusive buttons
-
         //setup appearance
         auto sequenceBoxColor = getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId);
         modeButtons[i]->setColour(juce::TextButton::buttonOnColourId, sequenceBoxColor);
@@ -494,7 +494,7 @@ juce::String PipBar::getFormattedValue() const {
         }
 
     case LENGTH:
-    case TAIL: {
+    case OVERLAP: {
         //same formatting for both time values
         int timeVal = (mode == LENGTH) ? ourPip.length : ourPip.tail;
         if (timeVal < 100) {  
@@ -580,7 +580,7 @@ void PipBar::PipBarArea::updateBarHeight() {
         heightPercent = (std::log(static_cast<float>(parentBar.ourPip.length)) - std::log(static_cast<float>(PipConstants::MIN_LENGTH))) /
             (std::log(static_cast<float>(PipConstants::MAX_LENGTH)) - std::log(static_cast<float>(PipConstants::MIN_LENGTH)));
         break;
-    case TAIL: 
+    case OVERLAP:
         
         tailValue = std::max(static_cast<float>(parentBar.ourPip.tail), 1.0f);  //ensure we don't take log of 0
         heightPercent = (std::log(tailValue) - std::log(1.0f)) /
@@ -638,7 +638,7 @@ void PipBar::PipBarArea::mouseDrag(const juce::MouseEvent& e) {
             break;
         }
 
-        case TAIL: {
+        case OVERLAP: {
             if (normalizedValue < 0.01f) {
                 //handle zero tail
                 parentBar.ourPip.tail = 0;
@@ -682,7 +682,7 @@ float PipBar::PipBarArea::getValue() {
             return parentPip.frequency;
         case LENGTH:
             return parentPip.length;
-        case TAIL:
+        case OVERLAP:
             return parentPip.tail;
         case LEVEL:
             return parentPip.level;
@@ -711,7 +711,7 @@ void PipBar::PipBarArea::applyInlineEditorValue(juce::String rawInput) {
             repaint();
             parentBar.repaint();
             return;
-        case TAIL:
+        case OVERLAP:
             parentBar.ourPip.tail = juce::jlimit(PipConstants::MIN_TAIL,
                                                  PipConstants::MAX_TAIL,
                                                  juce::roundToInt(newValue));

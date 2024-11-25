@@ -14,6 +14,7 @@
 #include "PipStructs.h"
 #include "PluginProcessor.h"
 #include "SongCodeCompiler.h"
+#include "HelmholtzResonator.h"
 
 class SynthVoice : public juce::SynthesiserVoice
 {
@@ -51,6 +52,23 @@ public:
         //add the default pattern if the first note isn't a pattern
         if (!song.empty() && song[0].type != SongElement::Type::Pattern) {
             song.insert(song.begin(), SongElement(std::vector<uint8_t>{1}));
+        }
+        
+        //get the resonator song from the other editor
+        if (*apvts->getRawParameterValue("Resonator On")) {
+            //don't forget to turn it on!
+            resonatorEnabled = true;
+
+            resSong = compileSongcode(resString.toStdString(), &error, linkedRandValues, freqStatusColor);
+            if (resSong.size() == 0) {
+                resonatorEnabled = false;   //might lead to unexpected behavior
+                clearCurrentNote();
+                return;
+            }
+            resCurIndex = 0;
+            resFreqDelta = 0;
+            resonatorFreq = 0;
+            setupNextResNote(resSong[0]);
         }
         
         rng.setSeedRandomly();
@@ -151,8 +169,15 @@ public:
             }
 
 
-            //add the output of all the active clicks to the channels
+            //calculate the output of all currently-active clicks
             float clickOutput = renderActiveClicks();
+
+            //if the resonator is on, then pass the click audio through it
+            if (resonatorEnabled) {
+               clickOutput = resonator.processSamples(clickOutput, resonatorFreq);
+            }
+
+            //add the clicks to the output buffer
             for (auto i = outputBuffer.getNumChannels(); --i >= 0;) {
                 outputBuffer.addSample(i, startSample, clickOutput);
             }
@@ -179,6 +204,23 @@ public:
                     setupNextNote(song[curElementIndex]);
                 }
             }
+
+            //now do all that stuff for the resonator too
+            if (resonatorEnabled) {
+                resSamplesRemaining--;
+                resonatorFreq += resFreqDelta;
+
+                if (resSamplesRemaining == 0) {
+                    ++resCurIndex;
+                    if (resCurIndex == resSong.size()) {
+                        resFreqDelta = 0.0;
+                        resSamplesRemaining = -1;   //i think this will stop res song going past final note
+                    }
+                    else {
+                        setupNextResNote(resSong[resCurIndex]);
+                    }
+                }
+            }
         }
     }
 
@@ -191,6 +233,11 @@ public:
         songString = newSongString;
     }
 
+    void setResonatorString(juce::String newResonatorString) {
+        juce::Logger::writeToLog("resonator song received: " + newResonatorString);
+        resString = newResonatorString;
+    }
+
     void setPipSequence(std::vector<Pip> pips) {
         pipSequence = pips;
         juce::Logger::writeToLog("Pips received. First freq: " + juce::String(pipSequence[0].frequency));
@@ -200,11 +247,18 @@ public:
         apvts = apvtsPtr;
     }
 
+    void prepareToPlay(double sampleRate, int samplesPerBlock) {
+        resonator.prepareToPlay(sampleRate);
+    }
+
 private:
+
+
 
     juce::Random rng;
     juce::AudioProcessorValueTreeState* apvts = nullptr;
     juce::String songString;
+    juce::String resString;
     std::vector<Pip> pipSequence;
 
     //song state
@@ -212,6 +266,15 @@ private:
     int curElementIndex = 0;
     bool playing = false;
     int samplesRemainingInNote = 0; 
+
+    //resonator song state
+    HelmholtzResonator resonator;
+    std::vector<SongElement> resSong = {};
+    int resCurIndex = 0;
+    int resSamplesRemaining = 0;
+    bool resonatorEnabled = true;
+    double resonatorFreq = 0.0f;
+    double resFreqDelta = 0.0f;
 
     //first layer impulse state
     double phase = 0.0;
@@ -283,6 +346,25 @@ private:
             samplesRemainingInNote = (int)noteLengthInSamples;
             deltaChangePerSample = (endingPhaseChange - startingPhaseChange) / noteLengthInSamples;
             //juce::Logger::writeToLog("delta increase: " + std::to_string(deltaChangePerSample) + ". samples remaining: " + std::to_string(samplesRemainingInNote));
+        }
+    }
+
+
+    void setupNextResNote(struct SongElement nextNote) {
+        if (nextNote.type == SongElement::Type::Pattern) {
+            //ignore. TODO in the future maybe throw a parsing error if a pattern is detected in res parsing in the future
+
+            //advance to next note
+            resCurIndex++;
+            setupNextResNote(resSong[resCurIndex]);
+        }
+        else {
+            auto startingFreq = nextNote.startFrequency;
+            auto endingFreq = nextNote.endFrequency;
+            auto noteLengthInSamples = (nextNote.duration / 1000) * getSampleRate();
+
+            resFreqDelta = (endingFreq - startingFreq) / noteLengthInSamples;
+            resSamplesRemaining = (int)noteLengthInSamples;
         }
     }
 
@@ -370,7 +452,7 @@ private:
                 }
 
             }
-            else {  //no new subclick yet, just advance the click
+            else {  //we don't need a new subclick on this sample. Decrement samples remaining til next
                 click.samplesTilNextClick--;
             }
         }
@@ -382,6 +464,8 @@ private:
             activeClicks.end()
         );
     }
-
-
 };
+
+
+
+

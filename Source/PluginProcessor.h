@@ -76,8 +76,17 @@ public:
         myVoice->setPipSequence(pips);
     }
 
+    void setResonatorCodeString(const juce::String& newCode) {
+        myVoice->setResonatorString(newCode);
+    }
+
+    juce::String getResonatorCodeString() const {
+        return resonatorCodeString;
+    }
+
 private:
     juce::String frequencyCodeString;
+    juce::String resonatorCodeString;
     juce::Synthesiser mySynth;
     SynthVoice* myVoice;
     double lastSampleRate;

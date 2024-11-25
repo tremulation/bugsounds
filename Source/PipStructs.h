@@ -49,6 +49,6 @@ namespace PipConstants {
 enum EditingMode {
     FREQUENCY, 
     LENGTH,
-    TAIL,
+    OVERLAP,
     LEVEL
 };

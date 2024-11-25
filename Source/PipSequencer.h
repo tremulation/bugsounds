@@ -59,19 +59,38 @@ public:
         else {
             // Unselected tab appearance
             auto darkerColor = baseColour.darker(0.2f);
-
+            auto reducedBounds = bounds.withTrimmedTop(4);
             g.setColour(darkerColor);
-            g.fillRect(bounds);
+            g.fillRect(reducedBounds);
 
             // Draw all borders for unselected tabs
             g.setColour(juce::Colours::white);
-            g.drawRect(bounds, 1.0f);
+            g.drawRect(reducedBounds, 1.0f);
 
             // Add subtle inner shadow for recessed effect
             g.setColour(juce::Colours::black.withAlpha(0.1f));
-            g.drawHorizontalLine(1, bounds.getX() + 1, bounds.getRight() - 1);
-            g.drawVerticalLine(1, bounds.getY() + 1, bounds.getBottom() - 1);
+            g.drawHorizontalLine(1, reducedBounds.getX() + 1, reducedBounds.getRight() - 1);
+            g.drawVerticalLine(1, reducedBounds.getY() + 1, reducedBounds.getBottom() - 1);
         }
+    }
+
+    juce::Font getTextButtonFont(juce::TextButton&, int buttonHeight) { return juce::Font(13.f); }
+
+    void drawButtonText(juce::Graphics& g, juce::TextButton& button,
+        bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+    {
+        auto font = getTextButtonFont(button, button.getHeight());
+        g.setFont(font);
+        g.setColour(button.findColour(button.getToggleState() ? juce::TextButton::textColourOnId
+            : juce::TextButton::textColourOffId)
+            .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f));
+
+        auto yOffset = button.getToggleState() ? 0.0f : 2.0f;  // 2px lower if not selected
+        auto textBounds = button.getLocalBounds();
+        textBounds.translate(0, (int)yOffset);
+
+        g.drawText(button.getButtonText(), textBounds,
+            juce::Justification::centred, false);
     }
 };
 

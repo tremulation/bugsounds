@@ -11,10 +11,12 @@
 
 
 //==============================================================================
-BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor (BugsoundsAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), clickSettingsRack(p), frequencyEditor("Frequency Editor")
+BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProcessor& p)
+    : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p), frequencyEditor("Frequency Editor"),
+    resonatorEditor("Resonator Editor")
 {
     addAndMakeVisible(frequencyEditor);
+    addAndMakeVisible(resonatorEditor);
     testButton.setButtonText("Play song from code");
     testButton.onClick = [this] { 
         freqCodeEditorHasChanged(); 
@@ -24,7 +26,7 @@ BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor (BugsoundsAudioProc
     addAndMakeVisible(pipSequencer);
 
     addAndMakeVisible(clickSettingsRack);
-    setSize(800, 400);
+    setSize(800, 600);
     
 }
 
@@ -41,40 +43,53 @@ void BugsoundsAudioProcessorEditor::paint (juce::Graphics& g)
 
 void BugsoundsAudioProcessorEditor::resized()
 {
-    auto area = getLocalBounds();
+    const int padding = 5;
+    const int pipSequencerHeight = 200;
+    const int buttonHeight = 30;
+    const int rackHeight = 120;
 
-    // Split into left and right sections first
-    //left is for entering custom data like pip settings and songcode
-    //right is for knobs that control parameters (things you can save in apvts)
+    //add consistent padding around all edges
+    auto area = getLocalBounds().reduced(padding);
+
+    //split into left and right sections
     auto leftArea = area.removeFromLeft(area.getWidth() * (8.f / 12.f));
+    leftArea.removeFromRight(padding / 2);  
+    area.removeFromLeft(padding / 2);       
 
-    // Now reduce both areas equally
-    // leftArea = leftArea.reduced(5);
+    //calculate editor height based on remaining space
+    const int editorHeight = (leftArea.getHeight() - pipSequencerHeight - buttonHeight - padding * 2) / 2;
 
-    // Left half for text editors and button
-    auto pipSequencerHeight = 200;
-    pipSequencer.setBounds(leftArea.removeFromTop(pipSequencerHeight));
-    testButton.setBounds(leftArea.removeFromBottom(30));
-    leftArea.removeFromBottom(5);
-    frequencyEditor.setBounds(leftArea);
+    //left area for ui components that control custom parameters (songcode and pips)
+    auto workingArea = leftArea;
 
-    // Right half for controls
-    auto rackHeight = 120;
+    //pip sequencer
+    pipSequencer.setBounds(workingArea.removeFromTop(pipSequencerHeight));
+    workingArea.removeFromTop(padding);
+
+    //frequency editor
+    frequencyEditor.setBounds(workingArea.removeFromTop(editorHeight));
+    workingArea.removeFromTop(padding);
+
+    //resonator editor
+    resonatorEditor.setBounds(workingArea.removeFromTop(editorHeight));
+    workingArea.removeFromTop(padding);
+
+    //test button at the bottom with padding on all sides
+    auto buttonArea = workingArea.removeFromTop(buttonHeight);
+    testButton.setBounds(buttonArea.reduced(padding, 0));
+
+    //right area for controls
     clickSettingsRack.setBounds(area.removeFromTop(rackHeight));
-    
-
-    // Space for additional controls below the rack
-    area.removeFromTop(5);  // Add some spacing after the rack
 }
 
 
 //if this doesn't work implement a fifo queue for transferring the string w/out locks
 void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
-    juce::String songcode = frequencyEditor.getText();
+    juce::String freqSongcode = frequencyEditor.getText();
     std::string freqStatusMsg;
-    std::map<char, int> linkedRandValues;
     juce::Colour freqStatusColor;
-    std::vector<SongElement> parsedSong = compileSongcode(songcode.toStdString(),
+    std::map<char, int> linkedRandValues;
+    std::vector<SongElement> parsedSong = compileSongcode(freqSongcode.toStdString(),
                                                            &freqStatusMsg,
                                                            linkedRandValues,
                                                            freqStatusColor);
@@ -87,6 +102,19 @@ void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
     else {
         audioProcessor.setFrequencyCodeString("");
     }
+
+    juce::String resSongcode = resonatorEditor.getText();
+    std::string resStatusMsg;
+    juce::Colour resStatusColor;
+    std::vector<SongElement> parsedResSong = compileSongcode(resSongcode.toStdString(),
+                                                             &resStatusMsg,
+                                                             linkedRandValues,
+                                                             resStatusColor);
+    resonatorEditor.setErrorMessage(resStatusMsg, resStatusColor);
+    if (resStatusMsg.substr(0, 5) != "Error") {
+        audioProcessor.setResonatorCodeString(resonatorEditor.getText());
+    }
+    else {
+        audioProcessor.setResonatorCodeString("");
+    }
 }
-
-
