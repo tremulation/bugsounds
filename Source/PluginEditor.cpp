@@ -13,7 +13,7 @@
 //==============================================================================
 BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p), frequencyEditor("Frequency Editor"),
-    resonatorEditor("Resonator Editor")
+    resonatorEditor("Resonator Editor"), resonatorKnobRack(p)
 {
     addAndMakeVisible(frequencyEditor);
     addAndMakeVisible(resonatorEditor);
@@ -26,6 +26,7 @@ BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProce
     addAndMakeVisible(pipSequencer);
 
     addAndMakeVisible(clickSettingsRack);
+    addAndMakeVisible(resonatorKnobRack);
     setSize(800, 600);
     
 }
@@ -80,6 +81,7 @@ void BugsoundsAudioProcessorEditor::resized()
 
     //right area for controls
     clickSettingsRack.setBounds(area.removeFromTop(rackHeight));
+    resonatorKnobRack.setBounds(area.removeFromTop(rackHeight));
 }
 
 
@@ -103,18 +105,22 @@ void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
         audioProcessor.setFrequencyCodeString("");
     }
 
-    juce::String resSongcode = resonatorEditor.getText();
-    std::string resStatusMsg;
-    juce::Colour resStatusColor;
-    std::vector<SongElement> parsedResSong = compileSongcode(resSongcode.toStdString(),
-                                                             &resStatusMsg,
-                                                             linkedRandValues,
-                                                             resStatusColor);
-    resonatorEditor.setErrorMessage(resStatusMsg, resStatusColor);
-    if (resStatusMsg.substr(0, 5) != "Error") {
-        audioProcessor.setResonatorCodeString(resonatorEditor.getText());
+    //set up resonator if it is on
+    if (*audioProcessor.apvts.getRawParameterValue("Resonator On")) {
+        juce::String resSongcode = resonatorEditor.getText();
+        std::string resStatusMsg;
+        juce::Colour resStatusColor;
+        std::vector<SongElement> parsedResSong = compileSongcode(resSongcode.toStdString(),
+            &resStatusMsg,
+            linkedRandValues,
+            resStatusColor);
+        resonatorEditor.setErrorMessage(resStatusMsg, resStatusColor);
+        if (resStatusMsg.substr(0, 5) != "Error") {
+            audioProcessor.setResonatorCodeString(resonatorEditor.getText());
+        }
+        else {
+            audioProcessor.setResonatorCodeString("");
+        }
     }
-    else {
-        audioProcessor.setResonatorCodeString("");
-    }
+    
 }

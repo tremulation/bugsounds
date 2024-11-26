@@ -14,6 +14,7 @@
 #include "SongCodeCompiler.h"
 #include "ClickSettingsKnobRack.h"
 #include "PipSequencer.h"
+#include "ResonatorKnobRack.h"
 
 //==============================================================================
 /**
@@ -38,6 +39,7 @@ private:
     SongcodeEditor resonatorEditor;
     juce::TextButton testButton;
     ClickSettingsKnobRack clickSettingsRack; 
+    ResonatorKnobRack resonatorKnobRack;
 
     void freqCodeEditorHasChanged();
     void resonatorCodeEditorHasChanged();

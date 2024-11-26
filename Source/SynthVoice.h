@@ -67,8 +67,11 @@ public:
             }
             resCurIndex = 0;
             resFreqDelta = 0;
-            resonatorFreq = 0;
+            resonatorFreq = resSong[0].startFrequency;
             setupNextResNote(resSong[0]);
+        }
+        else {
+            resonatorEnabled = false;
         }
         
         rng.setSeedRandomly();
@@ -174,6 +177,7 @@ public:
 
             //if the resonator is on, then pass the click audio through it
             if (resonatorEnabled) {
+                resonator.Q = *apvts->getRawParameterValue("Resonator Q");
                clickOutput = resonator.processSamples(clickOutput, resonatorFreq);
             }
 
@@ -272,7 +276,7 @@ private:
     std::vector<SongElement> resSong = {};
     int resCurIndex = 0;
     int resSamplesRemaining = 0;
-    bool resonatorEnabled = true;
+    bool resonatorEnabled = false;
     double resonatorFreq = 0.0f;
     double resFreqDelta = 0.0f;
 

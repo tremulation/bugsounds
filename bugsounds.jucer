@@ -4,6 +4,8 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="RIYwew" name="bugsounds">
     <GROUP id="{28D391B9-8AA7-A9B0-B4E4-937980DDCF90}" name="Source">
+      <FILE id="lYSnOF" name="ResonatorKnobRack.h" compile="0" resource="0"
+            file="Source/ResonatorKnobRack.h"/>
       <FILE id="u8yBVr" name="HelmholtzResonator.h" compile="0" resource="0"
             file="Source/HelmholtzResonator.h"/>
       <FILE id="Ga6q4m" name="PipSequencer.cpp" compile="1" resource="0"

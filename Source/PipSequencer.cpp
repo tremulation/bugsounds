@@ -116,9 +116,10 @@ std::vector<Pip> PipSequencer::getPips() {
 
 
 void PipSequencer::logPips(const std::vector<Pip> pips) {
+    juce::String fullString = "";
     for (size_t i = 0; i < pips.size(); i++) {
         const auto& pip = pips[i];
-        juce::String pipString = "Pip " + juce::String(i) + ": ";
+        juce::String pipString = "(";
 
         if (pip.frequency >= 1000.0f) {
             float kHzValue = pip.frequency / 1000.0f;
@@ -152,11 +153,16 @@ void PipSequencer::logPips(const std::vector<Pip> pips) {
         // Level (percentage)
         pipString += juce::String(std::round(pip.level * 100)) + "%";
 
-        juce::Logger::writeToLog(pipString);
+        pipString += ")";
+        
+        if (i < pips.size() - 1) {
+            pipString += ", ";
+        }
+        fullString += pipString;
     }
 
     // Log total count
-    juce::Logger::writeToLog("Total pips: " + juce::String(pips.size()));
+    juce::Logger::writeToLog("Pips: " + fullString);
 }
 
 
