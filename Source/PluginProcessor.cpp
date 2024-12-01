@@ -244,6 +244,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
         juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
         0.0f));
 
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Click Rise Ratio",
+        "Click Rise Ratio",
+        juce::NormalisableRange<float>(0.1f, 0.9f, 0.01f, 1.f),
+        0.25f  // Default to 1/4 rise, 3/4 fall
+    ));
+
     return layout;
 }
 

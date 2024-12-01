@@ -302,10 +302,12 @@ private:
     };
  
     struct SubClick {
-        float frequency;
         int samplesRemaining;
-        float phase;
-        float level;
+        double frequency;
+        double phase;
+        double maxLevel;
+        double curLevel;
+        double levelChangePerSample;
     };
 
     std::vector<Click> activeClicks;
@@ -374,12 +376,23 @@ private:
 
 
     float renderActiveClicks() {
-        float output = 0.0;
+        double output = 0.0;
         //process all the clicks the synth is currently playing
         for (auto& click : activeSubClicks) {
-            output += std::sin(click.phase * 2.0f * juce::MathConstants<float>::pi) * click.level;
+
+            //calculate raw sine val, save its state
+            float oscVal = std::sin(click.phase * 2.0f * juce::MathConstants<double>::pi);
             click.phase += click.frequency / getSampleRate();
             if (click.phase >= 1.0f) click.phase -= 1.0f;
+
+            //when curlevel = maxLevel, linearly descend to 0 intensity in remaining samples
+            if (click.curLevel >= click.maxLevel) {
+                click.levelChangePerSample = -(click.curLevel / static_cast<double>(click.samplesRemaining));
+            }
+            click.curLevel += click.levelChangePerSample;
+             
+            output += oscVal * click.curLevel;
+
             click.samplesRemaining--;
         }
 
@@ -389,7 +402,7 @@ private:
                 [](const SubClick& click) { return click.samplesRemaining <= 0; }),
             activeSubClicks.end()
         );
-        return output;
+        return static_cast<float>(output);
     }
 
 
@@ -428,10 +441,18 @@ private:
         float levelOffsetScalar = 1 - (rng.nextFloat() * levelRandomnessAmount);
         float randomizedLevel = baseLevel * levelOffsetScalar;
         
-        newClick.frequency = baseFreq * frequencyMultiplier;
+        float ratioParam = *apvts->getRawParameterValue("Click Rise Ratio");
+        int samplesUntilFall = std::round(ratioParam * static_cast<float>(samples));
+
         newClick.samplesRemaining = samples;
+ 
         newClick.phase = 0.0f;
-        newClick.level = randomizedLevel;
+        newClick.frequency = baseFreq * frequencyMultiplier;
+
+        newClick.maxLevel = randomizedLevel;
+        newClick.curLevel = 0.0f;
+        newClick.levelChangePerSample = randomizedLevel / static_cast<double>(samplesUntilFall);
+        
         activeSubClicks.push_back(newClick);
     }
 
