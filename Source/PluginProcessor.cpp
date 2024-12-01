@@ -248,7 +248,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
         "Click Rise Ratio",
         "Click Rise Ratio",
         juce::NormalisableRange<float>(0.1f, 0.9f, 0.01f, 1.f),
-        0.25f  // Default to 1/4 rise, 3/4 fall
+        0.10f  // Default to 1/4 rise, 3/4 fall
     ));
 
     return layout;

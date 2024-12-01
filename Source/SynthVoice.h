@@ -161,8 +161,6 @@ public:
                         patternPhaseDivisor = beatPattern[patternIndex];
                     }
                 }
-                //run second-layer subclick generation on all the clicks in activeClicks
-                updateActiveClicks();
 
                 //calculate new random offset for next click's phase
                 //offset will be in range (-timingOffestMax * offsetScalar, timingOffsetMax * offsetScalar)
@@ -170,6 +168,9 @@ public:
                 float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax; 
                 timingOffset = (randomOffset * offsetScalar) * (1.0 / patternPhaseDivisor);
             }
+
+            //run second-layer subclick generation on all the clicks in activeClicks
+            updateActiveClicks();
 
 
             //calculate the output of all currently-active clicks
@@ -399,7 +400,14 @@ private:
         //remove finished clicks
         activeSubClicks.erase(
             std::remove_if(activeSubClicks.begin(), activeSubClicks.end(),
-                [](const SubClick& click) { return click.samplesRemaining <= 0; }),
+                [](const SubClick& click) {
+                    bool shouldTerminate = (click.samplesRemaining <= 0);
+                    if (shouldTerminate) {
+                        juce::Logger::writeToLog("    ending: " + juce::String(click.frequency) + ", " + juce::String(click.maxLevel));
+                        
+                    }
+                    return shouldTerminate;
+                }),
             activeSubClicks.end()
         );
         return static_cast<float>(output);
@@ -452,6 +460,8 @@ private:
         newClick.maxLevel = randomizedLevel;
         newClick.curLevel = 0.0f;
         newClick.levelChangePerSample = randomizedLevel / static_cast<double>(samplesUntilFall);
+
+        
         
         activeSubClicks.push_back(newClick);
     }
