@@ -12,8 +12,8 @@
 
 //==============================================================================
 BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProcessor& p)
-    : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p), frequencyEditor("Frequency Editor"),
-    resonatorEditor("Resonator Editor"), resonatorKnobRack(p)
+    : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p), frequencyEditor("Frequency Editor", false),
+    resonatorEditor("Resonator Editor", true), resonatorKnobRack(p, *this)
 {
     addAndMakeVisible(frequencyEditor);
     addAndMakeVisible(resonatorEditor);
@@ -87,40 +87,65 @@ void BugsoundsAudioProcessorEditor::resized()
 
 //if this doesn't work implement a fifo queue for transferring the string w/out locks
 void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
-    juce::String freqSongcode = frequencyEditor.getText();
-    std::string freqStatusMsg;
-    juce::Colour freqStatusColor;
-    std::map<char, int> linkedRandValues;
-    std::vector<SongElement> parsedSong = compileSongcode(freqSongcode.toStdString(),
-                                                           &freqStatusMsg,
-                                                           linkedRandValues,
-                                                           freqStatusColor);
+    //juce::String freqSongcode = frequencyEditor.getText();
+    //std::string freqStatusMsg;
+    //juce::Colour freqStatusColor;
+    //std::map<char, int> linkedRandValues;
+    //std::vector<SongElement> parsedSong = compileSongcode(freqSongcode.toStdString(),
+    //                                                       &freqStatusMsg,
+    //                                                       linkedRandValues,
+    //                                                       freqStatusColor);
+    //
+    //frequencyEditor.setErrorMessage(freqStatusMsg, freqStatusColor);
+    //
+    //if (freqStatusMsg.substr(0, 5) != "Error") {
+    //    audioProcessor.setFrequencyCodeString(frequencyEditor.getText());
+    //}
+    //else {
+    //    audioProcessor.setFrequencyCodeString("");
+    //}
+
+    ////set up resonator if it is on
+    //if (*audioProcessor.apvts.getRawParameterValue("Resonator On")) {
+    //    juce::String resSongcode = resonatorEditor.getText();
+    //    std::string resStatusMsg;
+    //    juce::Colour resStatusColor;
+    //    std::vector<SongElement> parsedResSong = compileSongcode(resSongcode.toStdString(),
+    //        &resStatusMsg,
+    //        linkedRandValues,
+    //        resStatusColor);
+    //    resonatorEditor.setErrorMessage(resStatusMsg, resStatusColor);
+    //    if (resStatusMsg.substr(0, 5) != "Error") {
+    //        audioProcessor.setResonatorCodeString(resonatorEditor.getText());
+    //    }
+    //    else {
+    //        audioProcessor.setResonatorCodeString("");
+    //    }
+    //}
     
-    frequencyEditor.setErrorMessage(freqStatusMsg, freqStatusColor);
-    
-    if (freqStatusMsg.substr(0, 5) != "Error") {
-        audioProcessor.setFrequencyCodeString(frequencyEditor.getText());
-    }
-    else {
+
+    juce::String freqSongCode = frequencyEditor.getText();
+    ErrorInfo errorInfo = {};
+    std::vector<SongElement> parsedSong = evaluateSongString(freqSongCode.toStdString(), &errorInfo);
+    //update the UI
+    //update the internal sound processor
+    if (errorInfo.message.length() >= 5 && errorInfo.message.substr(0, 5) == "Error") {
+        frequencyEditor.setError(&errorInfo);
         audioProcessor.setFrequencyCodeString("");
     }
-
-    //set up resonator if it is on
-    if (*audioProcessor.apvts.getRawParameterValue("Resonator On")) {
-        juce::String resSongcode = resonatorEditor.getText();
-        std::string resStatusMsg;
-        juce::Colour resStatusColor;
-        std::vector<SongElement> parsedResSong = compileSongcode(resSongcode.toStdString(),
-            &resStatusMsg,
-            linkedRandValues,
-            resStatusColor);
-        resonatorEditor.setErrorMessage(resStatusMsg, resStatusColor);
-        if (resStatusMsg.substr(0, 5) != "Error") {
-            audioProcessor.setResonatorCodeString(resonatorEditor.getText());
-        }
-        else {
-            audioProcessor.setResonatorCodeString("");
-        }
+    else {
+        //TODO change to send the string if no error here
+        frequencyEditor.setError(nullptr);
+        audioProcessor.setFrequencyCodeString("");
     }
-    
+}
+
+
+void BugsoundsAudioProcessorEditor::disableResonatorEditor() {
+    resonatorEditor.disableEditor();
+}
+
+
+void BugsoundsAudioProcessorEditor::enableResonatorEditor() {
+    resonatorEditor.enableEditor();
 }

@@ -62,8 +62,6 @@ public:
             resSong = compileSongcode(resString.toStdString(), &error, linkedRandValues, freqStatusColor);
             if (resSong.size() == 0) {
                 resonatorEnabled = false;   //might lead to unexpected behavior
-                clearCurrentNote();
-                return;
             }
             resCurIndex = 0;
             resFreqDelta = 0;
@@ -166,12 +164,11 @@ public:
                 //offset will be in range (-timingOffestMax * offsetScalar, timingOffsetMax * offsetScalar)
                 float offsetScalar = *apvts->getRawParameterValue("Click Timing Random"); //0.0 to 1.0
                 float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax; 
-                timingOffset = (randomOffset * offsetScalar) * (1.0 / patternPhaseDivisor);
+                timingOffset = (randomOffset * offsetScalar) * (1.0f / patternPhaseDivisor);
             }
 
             //run second-layer subclick generation on all the clicks in activeClicks
             updateActiveClicks();
-
 
             //calculate the output of all currently-active clicks
             float clickOutput = renderActiveClicks();
@@ -179,7 +176,7 @@ public:
             //if the resonator is on, then pass the click audio through it
             if (resonatorEnabled) {
                 resonator.Q = *apvts->getRawParameterValue("Resonator Q");
-               clickOutput = resonator.processSamples(clickOutput, resonatorFreq);
+               clickOutput = resonator.processSamples(clickOutput, ((float)resonatorFreq));
             }
 
             //add the clicks to the output buffer
@@ -364,12 +361,14 @@ private:
             //advance to next note
             resCurIndex++;
             setupNextResNote(resSong[resCurIndex]);
+            
         }
         else {
+            
             auto startingFreq = nextNote.startFrequency;
             auto endingFreq = nextNote.endFrequency;
             auto noteLengthInSamples = (nextNote.duration / 1000) * getSampleRate();
-
+            juce::Logger::writeToLog("res note: " + juce::String(endingFreq) + ", " + juce::String(noteLengthInSamples));
             resFreqDelta = (endingFreq - startingFreq) / noteLengthInSamples;
             resSamplesRemaining = (int)noteLengthInSamples;
         }
@@ -402,10 +401,6 @@ private:
             std::remove_if(activeSubClicks.begin(), activeSubClicks.end(),
                 [](const SubClick& click) {
                     bool shouldTerminate = (click.samplesRemaining <= 0);
-                    if (shouldTerminate) {
-                        juce::Logger::writeToLog("    ending: " + juce::String(click.frequency) + ", " + juce::String(click.maxLevel));
-                        
-                    }
                     return shouldTerminate;
                 }),
             activeSubClicks.end()
@@ -426,7 +421,7 @@ private:
         newClick.pos = 1;   //already started first pip, go to second
         newClick.samplesTilNextClick = firstPip.length - firstPip.tail;
         if (newClick.samplesTilNextClick <= 0) {
-            newClick.samplesTilNextClick == 1;
+            newClick.samplesTilNextClick = 1;
         }
 
         activeClicks.push_back(newClick);

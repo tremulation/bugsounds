@@ -10,7 +10,10 @@
 
 #include "songcodeEditor.h"
 
-SongcodeEditor::SongcodeEditor(const juce::String& title)
+
+
+
+SongcodeEditor::SongcodeEditor(const juce::String& title, bool startDisabled)
 {
     //set up title 
     titleLabel.setFont(juce::Font(16.0f));
@@ -25,9 +28,11 @@ SongcodeEditor::SongcodeEditor(const juce::String& title)
     mainEditor.setScrollbarsShown(true);
     mainEditor.setCaretVisible(true);
     mainEditor.setPopupMenuEnabled(true);
-    mainEditor.setText("Enter your songcode here...");
+    mainEditor.setTextToShowWhenEmpty("Enter your songcode here...", juce::Colours::beige);
     mainEditor.setColour(juce::TextEditor::outlineColourId, juce::Colours::white);
 
+    //enable text editor listeners
+    mainEditor.addListener(this);
 
     addAndMakeVisible(mainEditor);
 
@@ -35,17 +40,26 @@ SongcodeEditor::SongcodeEditor(const juce::String& title)
     errorLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     errorLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(errorLabel);
+
+    defaultEditorColour = mainEditor.findColour(juce::TextEditor::backgroundColourId);
+    defaultBackgroundColour = getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId);
+
+    //i have a feeling this will cause problems laters
+    isDisabled = startDisabled;
 }
+
 
 SongcodeEditor::~SongcodeEditor()
 {
 }
 
+
 void SongcodeEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+
     auto bounds = getLocalBounds();
     auto contentBounds = bounds.reduced(5);
+    g.fillAll(defaultBackgroundColour);
 
     //draw outer white border
     g.setColour(juce::Colours::white);
@@ -59,6 +73,14 @@ void SongcodeEditor::paint(juce::Graphics& g)
         titleBounds.getBottom(),
         1.0f);
 }
+
+void SongcodeEditor::paintOverChildren(juce::Graphics& g) {
+    if (isDisabled) {
+        paintOverlay(g);
+    }
+} 
+
+
 
 void SongcodeEditor::resized()
 {
@@ -87,8 +109,93 @@ void SongcodeEditor::setText(const juce::String& newText)
     mainEditor.setText(newText);
 }
 
-void SongcodeEditor::setErrorMessage(const juce::String& errorMessage, juce::Colour color)
-{
-    errorLabel.setText(errorMessage, juce::dontSendNotification);
-    errorLabel.setColour(juce::Label::textColourId, color);
+
+//error handling
+void SongcodeEditor::clearErrorHighlight() {
+    currentErrorRange = juce::Range<int>(0, 0);
+    hasActiveError = false;
+    
+    mainEditor.setTemporaryUnderlining(currentErrorRange);
 }
+
+
+void SongcodeEditor::setError(ErrorInfo* error) {
+    if (error == nullptr) {
+        errorLabel.setColour(juce::Label::textColourId, juce::Colours::darkgreen);
+        errorLabel.setText(juce::String("Compiled successfully"), juce::NotificationType::dontSendNotification);
+    }
+    else {
+        //set message
+        errorLabel.setColour(juce::Label::textColourId, juce::Colours::maroon);
+        errorLabel.setText(juce::String(error->message), juce::NotificationType::dontSendNotification);
+
+        //highlight error
+        currentErrorRange = juce::Range<int>(error->errorStart, error->errorEnd + 1);
+        hasActiveError = true;
+        mainEditor.setTemporaryUnderlining(currentErrorRange);
+        
+        oldTextLength = mainEditor.getText().length();
+    }
+}
+
+
+void SongcodeEditor::textEditorTextChanged(juce::TextEditor&) {
+
+    if (isDisabled) return;
+
+    if (hasActiveError) {
+        auto caretPos = mainEditor.getCaretPosition();
+        if (caretPos > currentErrorRange.getStart() && caretPos < currentErrorRange.getEnd()) {
+            clearErrorHighlight();
+        }
+        else if( caretPos < currentErrorRange.getStart()) {
+            //recalculate error position
+            int newLength = mainEditor.getText().length();
+            int lendiff = oldTextLength - newLength;
+            oldTextLength = newLength;
+   
+            currentErrorRange = juce::Range<int>(currentErrorRange.getStart() - lendiff, currentErrorRange.getEnd() - lendiff);
+            //juce::Logger::writeToLog("Old length: " + juce::String(oldTextLength) + ", newlength: " + juce::String(newLength));
+            mainEditor.setTemporaryUnderlining(currentErrorRange);
+        }
+    }
+}
+
+
+void SongcodeEditor::paintOverlay(juce::Graphics& g)
+{
+    auto overlayColour = juce::Colours::black.withAlpha(0.3f);
+    g.setColour(overlayColour);
+    auto overlayBounds = getLocalBounds().reduced(5);
+    g.fillRect(overlayBounds);
+
+    //draw disabled text
+    g.setColour(juce::Colours::white);
+    g.setFont(24.0f);
+    g.drawText("DISABLED", getLocalBounds(), juce::Justification::centred, true);
+    //recompile pls
+    10 + 1;
+}
+
+
+void SongcodeEditor::disableEditor() {
+    isDisabled = true;
+    mainEditor.setReadOnly(true);
+    mainEditor.setCaretVisible(false);
+
+    repaint();
+}
+
+
+void SongcodeEditor::enableEditor() {
+    isDisabled = false;
+    mainEditor.setReadOnly(false);
+    mainEditor.setCaretVisible(true);
+
+    repaint();
+}
+
+
+
+
+

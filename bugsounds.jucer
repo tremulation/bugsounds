@@ -4,6 +4,10 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="RIYwew" name="bugsounds">
     <GROUP id="{28D391B9-8AA7-A9B0-B4E4-937980DDCF90}" name="Source">
+      <FILE id="tNiF4t" name="ResonatorKnobRack.cpp" compile="1" resource="0"
+            file="Source/ResonatorKnobRack.cpp"/>
+      <FILE id="uJWTyB" name="Evaluator.h" compile="0" resource="0" file="Source/Evaluator.h"/>
+      <FILE id="AvvfOh" name="Evaluator.cpp" compile="1" resource="0" file="Source/Evaluator.cpp"/>
       <FILE id="lYSnOF" name="ResonatorKnobRack.h" compile="0" resource="0"
             file="Source/ResonatorKnobRack.h"/>
       <FILE id="u8yBVr" name="HelmholtzResonator.h" compile="0" resource="0"

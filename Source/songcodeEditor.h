@@ -11,24 +11,53 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "Evaluator.h"
 
-class SongcodeEditor : public juce::Component
+struct ErrorInfo;
+
+
+class SongcodeEditor : public juce::Component,
+                       public juce::TextEditor::Listener
 {
     public:
-        SongcodeEditor(const juce::String& title);
+        SongcodeEditor(const juce::String& title, bool startDisabled);
         ~SongcodeEditor() override;
 
         void paint(juce::Graphics&) override;
         void resized() override;
+        void paintOverChildren(juce::Graphics& g) override;
 
         juce::String getText() const;
         void setText(const juce::String& newText);
 
-        void SongcodeEditor::setErrorMessage(const juce::String& errorMessage, juce::Colour color);
+        //if error is null, then successfully compiled.
+        void SongcodeEditor::setError(ErrorInfo* error = nullptr);
+        void clearErrorHighlight();
+
+        void disableEditor();
+        void enableEditor();
+
     private:
+        void textEditorTextChanged(juce::TextEditor&) override;
+        void paintOverlay(juce::Graphics& g);
+
         juce::Label titleLabel;
         juce::TextEditor mainEditor;
         juce::Label errorLabel;
+
+        juce::Range<int> currentErrorRange;
+        int oldTextLength = 0;
+        bool hasActiveError = false;
+        juce::LookAndFeel_V4 errorLookAndFeel;
+        juce::LookAndFeel_V4* normalLookAndFeel;
+
+
+        juce::Colour defaultEditorColour;
+        juce::Colour defaultBackgroundColour;
+        juce::Colour disabledEditorColour;
+        juce::Colour disabledBackgroundColour;
+
+        bool isDisabled;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SongcodeEditor)
 };

@@ -206,7 +206,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
         "Resonator Q",
         "Resonator Q",
         juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f),
-        1.f));
+        5.f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Resonator Gain",
@@ -217,7 +217,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
     layout.add(std::make_unique<juce::AudioParameterBool>(
         "Resonator On",
         "Resonator On",
-        true));
+        false));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Resonator Harmonics",

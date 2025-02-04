@@ -483,10 +483,22 @@ vector<string> tokenize(const string& song, std::string* errorMsg, std::map<char
 {   
     vector<string> firstPassTokens = firstPassTokenize(song, errorMsg);
     if (firstPassTokens.empty()) return {};  // Error handling: Return an empty song on error
+    juce::Logger::writeToLog("-------------First pass-------------");
+    for (string s : firstPassTokens) {
+        juce::Logger::writeToLog(s);
+    }
     vector<string> secondPassTokens = secondPassTokenize(firstPassTokens, errorMsg, linkedRandValues);
     if(secondPassTokens.empty()) return {};
+    juce::Logger::writeToLog("-------------second pass-------------");
+    for (string s : secondPassTokens) {
+        juce::Logger::writeToLog(s);
+    }
     vector<string> thirdPassTokens = thirdPassTokenize(secondPassTokens, errorMsg, linkedRandValues);
     if(thirdPassTokens.empty()) return {};
+    juce::Logger::writeToLog("-------------Third pass-------------");
+    for (string s : thirdPassTokens) {
+        juce::Logger::writeToLog(s);
+    }
     return thirdPassTokens; 
 }
 

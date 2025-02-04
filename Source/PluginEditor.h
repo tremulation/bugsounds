@@ -15,6 +15,7 @@
 #include "ClickSettingsKnobRack.h"
 #include "PipSequencer.h"
 #include "ResonatorKnobRack.h"
+#include "Evaluator.h"
 
 //==============================================================================
 /**
@@ -28,6 +29,9 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
+
+    void disableResonatorEditor();
+    void enableResonatorEditor();
 
 private:
     // This reference is provided as a quick way for your editor to
