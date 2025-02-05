@@ -226,7 +226,6 @@ private:
     //parsing helpers
     bool match_token(TokenType expected);
     std::optional<Token> lookahead(size_t offset = 0) const;
-    Token consume();
 
     // Parsing methods
     bool parse_statement();

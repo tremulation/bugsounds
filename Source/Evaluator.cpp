@@ -251,6 +251,73 @@ bool Parser::match_token(TokenType expected) {
 }
 
 
+//--------------------------------- PARSING FUNCTIONS -----------------------
+
+//top level parsing function, equivalent to parse_script in the CFG
+ScriptPtr Parser::parse() {
+    while (it != end) {
+        //error is set in lesser parsing functions
+        bool successful = parse_statement();
+        if (!successful) return {};
+    }
+    return AST;
+}
+
+
+bool Parser::parse_statement() {
+    bool successful = false;
+    optional<Token> nextTok = lookahead();
+    if (!nextTok.has_value()) return true;
+
+    TokenType ntt = nextTok.value().type;
+    if (ntt == TokenType::Num || ntt == TokenType::Id || ntt == TokenType::Rand || ntt == TokenType::ParStart) {
+        successful = parse_note();
+    }
+    else if (ntt == TokenType::Pattern) {
+        successful = parse_pattern();
+    }
+    else if (ntt == TokenType::Let) {
+        successful = parse_let();
+    }
+    else if (ntt == TokenType::LStart) {
+        successful = parse_loop();
+    }
+    else {
+        int ntStart = nextTok.value().startPos;
+        int ntEnd   = nextTok.value().endPos;
+        setErrorInfo(errorInfo, "Error: expected a number, pattern, let, or loop", ntStart, ntEnd, "");
+        return false;
+    }
+
+    //I don't want to enforce required comma as last character, so:
+    //If there are at a couple tokens left, then we need a comma as our direct lookahead
+    if (successful) {
+        if (lookahead(1).has_value() && !match_token(TokenType::Comma)) {
+        nextTok = lookahead();  //has probably changed by now.
+        int ntStart = nextTok.value().startPos;
+        int ntEnd = nextTok.value().endPos;
+        setErrorInfo(errorInfo, "Error: expected a number, pattern, let, or loop", ntStart, ntEnd, "");
+        }
+    }
+}
+
+//start by writing a working parse_note, then do the rest of the symbols
+bool Parser::parse_note() {
+    return true;
+}
+bool Parser::parse_pattern() {
+    return true;
+}
+bool Parser::parse_let() {
+    return true;
+}
+bool Parser::parse_loop() {
+    return true;
+}
+
+
+
+
 namespace {
     std::string statementToString(const StatementPtr& stmt);
     std::string exprToString(const ExprPtr& expr);
