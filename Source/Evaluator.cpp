@@ -27,47 +27,10 @@ using namespace std;
 
 
 
-//--------------------- LEXER ---------------------\\
-
-enum class TokenType {
-Num,
-Let,
-Id,
-Equals,
-Rand,
-Add,
-Sub,
-Div,
-Mul,
-LStart,
-LEnd,
-Comma,
-ParStart,
-ParEnd,
-Pattern,
-Comment
-};
-
-
-struct Token {
-    TokenType type;
-    int numValue;
-    std::string idValue;    //variable name, if a var
-    std::string text;       //exact text of the token
-    size_t startPos;
-    size_t endPos;
-
-    explicit Token(TokenType t, size_t s, size_t e, const string& txt) : 
-        type(t), numValue(0), idValue(""), startPos(s), endPos(e), text(txt) {}
-    Token(TokenType t, int num, size_t s, size_t e, const string& txt) : 
-        type(t), numValue(num), idValue(""), startPos(s), endPos(e), text(txt) {}
-    Token(TokenType t, const std::string& id, size_t s, size_t e, const string& txt) : 
-        type(t), numValue(0), idValue(id), startPos(s), endPos(e), text(txt) {}
-};
-
-
-
-
+/*
+-------------------============ LEXER CLASS ============-------------------
+Turns the raw songcode string into a vector of tokens for the parser
+*/
 
 class SongCodeLexer {
     std::string input;
@@ -246,6 +209,188 @@ public:
 };
 
 
+/* 
+-------------------============ PARSER CLASS ============-------------------
+Parses the token stream from the lexer into an AST that can be sent to the synth and evaluated on the fly
+operates on this context-free-grammar:
+
+    Script 		-> Statement*
+    Statement 	-> Note COMMA | Pattern COMMA | Declaration COMMA | Loop COMMA
+    Note		-> AdditiveExpr AdditiveExpr
+    Pattern		-> PATTERN PARSTART AdditiveExpr* PAREND
+    Declaration -> LET ID EQUALS AdditiveExpr
+    Loop 		-> BARSTART Statement* BAREND AdditiveExpr
+    AdditiveExpr-> MultiplicativeExpr (ADDOPERATOR AdditiveExpr)?
+    MultiplicativeExpr -> PrimaryExpr (MULTOPERATOR MultiplicativeExpr)?
+    PrimaryExpr -> INT | ID | Random | PARSTART AdditiveExpr PAREND
+    Random      -> RAND PARSTART AdditiveExpr AdditiveExpr PAREND
+
+All functions operate on a shared state set in the constructor, to minimize the amount
+of arguments I have to pass over and over
+*/
+
+//--------------------------------- HELPERS ---------------------------------
+
+//returns next token in the stream. 
+//optional offset argument for checking tokens past the next one
+std::optional<Token> Parser::lookahead(size_t offset) const {
+    if (it + offset < end) {
+        return *(it + offset);
+    }
+    return std::nullopt;
+}
+
+//checks if the next token is the expected type. if so, consume it, and return true
+//else return false and don't change the tokens
+bool Parser::match_token(TokenType expected) {
+    if (lookahead().has_value() && lookahead()->type == expected) {
+        *it++;
+        return true;
+    }
+    return false;
+}
+
+
+namespace {
+    std::string statementToString(const StatementPtr& stmt);
+    std::string exprToString(const ExprPtr& expr);
+}
+
+std::string astToString(const ScriptPtr& script) {
+    if (!script) return "Empty AST";
+
+    std::stringstream ss;
+    int count = 1;
+    for (const auto& stmt : script->statements) {
+        ss << count++ << ". " << statementToString(stmt) << "\n";
+    }
+    return ss.str();
+}
+
+namespace {
+    std::string statementToString(const StatementPtr& stmt) {
+        if (auto note = dynamic_cast<NoteNode*>(stmt.get())) {
+            return "Note(freq: " + exprToString(note->frequency) +
+                ", dur: " + exprToString(note->duration) + ")";
+        }
+        if (auto pattern = dynamic_cast<PatternNode*>(stmt.get())) {
+            std::string elements;
+            for (const auto& expr : pattern->subBeats) {
+                if (!elements.empty()) elements += ", ";
+                elements += exprToString(expr);
+            }
+            return "Pattern[" + elements + "]";
+        }
+        if (auto loop = dynamic_cast<LoopNode*>(stmt.get())) {
+            std::string body;
+            for (const auto& s : loop->body) {
+                body += "\n    " + statementToString(s);
+            }
+            return "Loop[iterations: " + exprToString(loop->iterations) + "]" + body;
+        }
+        if (auto let = dynamic_cast<LetNode*>(stmt.get())) {
+            return "Let(" + let->id + " = " + exprToString(let->value) + ")";
+        }
+        return "Unknown Statement";
+    }
+
+    std::string exprToString(const ExprPtr& expr) {
+        if (!expr) return "null";
+
+        if (auto add = dynamic_cast<AdditiveExprNode*>(expr.get())) {
+            char op = (add->op == AdditiveExprNode::Add) ? '+' : '-';
+            return "(" + exprToString(add->left) + " " + op + " " + exprToString(add->right) + ")";
+        }
+        if (auto mul = dynamic_cast<MultiplicativeExprNode*>(expr.get())) {
+            char op = (mul->op == MultiplicativeExprNode::Multiply) ? '*' : '/';
+            return "(" + exprToString(mul->left) + " " + op + " " + exprToString(mul->right) + ")";
+        }
+        if (auto prim = dynamic_cast<PrimaryExprNode*>(expr.get())) {
+            switch (prim->kind) {
+            case PrimaryExprNode::Integer:
+                return std::to_string(prim->integerValue);
+            case PrimaryExprNode::Variable:
+                return prim->variableName;
+            case PrimaryExprNode::Grouped:
+                return "(" + exprToString(prim->groupedExpr) + ")";
+            }
+        }
+        if (auto rand = dynamic_cast<RandomNode*>(expr.get())) {
+            return "rand(" + exprToString(rand->min) + ", " + exprToString(rand->max) + ")";
+        }
+        return "?";
+    }
+}
+
+
+ExprNode* createExprRecursive(int depth = 0) {
+    const int maxDepth = 3;
+
+    //base case: return random int
+    if (depth >= maxDepth || (rand() % 2 == 0)){
+        int value = rand() % 100; // integer literal between 0 and 99
+        return new PrimaryExprNode(value);
+    }
+
+    //recursive case: randomly choose expr type and descend
+    int choice = rand() % 3;
+    if (choice == 0){
+        //additive expression: (left + right) or (left - right)
+        ExprNode* left = createExprRecursive(depth + 1);
+        ExprNode* right = createExprRecursive(depth + 1);
+        auto op = (rand() % 2 == 0) ? AdditiveExprNode::Add : AdditiveExprNode::subtract;
+        return new AdditiveExprNode(left, right, op);
+    } else if (choice == 1){
+        //multiplicative expression: (left * right) or (left / right)
+        ExprNode* left = createExprRecursive(depth + 1);
+        ExprNode* right = createExprRecursive(depth + 1);
+        auto op = (rand() % 2 == 0) ? MultiplicativeExprNode::Multiply : MultiplicativeExprNode::Divide;
+        return new MultiplicativeExprNode(left, right, op);
+    } else {
+        //parenthesized expression
+        ExprNode* inner = createExprRecursive(depth + 1);
+        return new PrimaryExprNode(inner);
+    }
+}
+
+
+ScriptPtr createRandomAST() {
+	auto script = new ScriptNode();
+	int numStatements = rand() % 4 + 3;
+
+	for (int i = 0; i < numStatements; ++i) {
+		int choice = rand() % 4; // 0: Let, 1: Note, 2: Pattern, 3: Loop
+		if (choice == 0) { //letNode 
+			ExprNode* expr = createExprRecursive();
+			std::string varName = "var" + std::to_string(i);
+			script->statements.push_back(new LetNode(varName, expr));   
+			script->variables[varName] = rand() % 100;
+		} else if (choice == 1) //noteNode
+		{
+			ExprNode* freq = createExprRecursive();
+			ExprNode* dur = createExprRecursive();
+			script->statements.push_back(new NoteNode(freq, dur));
+		} else if (choice == 2) { //patternNode
+			auto pattern = new PatternNode();
+			int numBeats = rand() % 4 + 2;
+			for (int j = 0; j < numBeats; ++j) {
+				pattern->subBeats.push_back(createExprRecursive());
+			}
+			script->statements.push_back(pattern);
+		} else { //loopNode
+			std::vector<StatementPtr> loopBody;
+			int loopLen = rand() % 3 + 1;
+			for (int j = 0; j < loopLen; ++j) {
+				//only notenodes rn
+				loopBody.push_back(new NoteNode(createExprRecursive(), createExprRecursive()));
+			}
+			//use a recursively generated expression for the iteration count.
+			script->statements.push_back(new LoopNode(loopBody, createExprRecursive()));
+		}
+	}
+	return script;
+}
+
 
 std::vector<SongElement> evaluateSongString(std::string& songcode,
                                             ErrorInfo* errorInfo,
@@ -254,6 +399,7 @@ std::vector<SongElement> evaluateSongString(std::string& songcode,
     auto lexerToks = lexer.tokenize(errorInfo);
     juce::Logger::writeToLog(errorInfo->message);
     juce::Logger::writeToLog("-------------First pass-------------" + juce::String(lexerToks.size()));
+    juce::Logger::writeToLog(juce::String(astToString(createRandomAST())));
     if (lexerToks.empty()) return {};
     
     lexer.printTokens(lexerToks);
