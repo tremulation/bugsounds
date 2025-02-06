@@ -233,8 +233,8 @@ of arguments I have to pass over and over
 
 //returns next token in the stream. 
 //optional offset argument for checking tokens past the next one
-std::optional<Token> Parser::lookahead(size_t offset) const {
-    if (it + offset < end) {
+std::optional<Token> Parser::lookahead(int offset) const {
+    if (std::distance(it, end) > static_cast<std::ptrdiff_t>(offset)) {
         return *(it + offset);
     }
     return std::nullopt;
@@ -243,8 +243,9 @@ std::optional<Token> Parser::lookahead(size_t offset) const {
 //checks if the next token is the expected type. if so, consume it, and return true
 //else return false and don't change the tokens
 bool Parser::match_token(TokenType expected) {
-    if (lookahead().has_value() && lookahead()->type == expected) {
-        *it++;
+    auto next = lookahead();
+    if (next.has_value() && next->type == expected) {
+        ++it;
         return true;
     }
     return false;
@@ -293,28 +294,268 @@ bool Parser::parse_statement() {
     //If there are at a couple tokens left, then we need a comma as our direct lookahead
     if (successful) {
         if (lookahead(1).has_value() && !match_token(TokenType::Comma)) {
-        nextTok = lookahead();  //has probably changed by now.
-        int ntStart = nextTok.value().startPos;
-        int ntEnd = nextTok.value().endPos;
-        setErrorInfo(errorInfo, "Error: expected a number, pattern, let, or loop", ntStart, ntEnd, "");
+            nextTok = lookahead();  //has probably changed by now.
+            int ntStart = nextTok.value().startPos;
+            int ntEnd = nextTok.value().endPos;
+            setErrorInfo(errorInfo, "Error: missing comma", ntStart, ntEnd, "");
         }
     }
+    return successful;
 }
 
-//start by writing a working parse_note, then do the rest of the symbols
+//start by writing a working parse_note, and a working parse_primary_expr (int only).
+//then do the rest of the statements
+//then do the rest of the expressions
+//then do the evaluator
 bool Parser::parse_note() {
-    return true;
-}
-bool Parser::parse_pattern() {
-    return true;
-}
-bool Parser::parse_let() {
-    return true;
-}
-bool Parser::parse_loop() {
+    //match frequency
+    ExprPtr freqExpr = parse_additive_expr();
+	if (!freqExpr) return false;
+
+    //match duration
+    ExprPtr durExpr = parse_additive_expr();
+    if (!durExpr) return false;
+	AST->statements.push_back(new NoteNode(freqExpr, durExpr));
     return true;
 }
 
+
+bool Parser::parse_pattern() {
+	//match pattern keyword
+    if (!match_token(TokenType::Pattern)) {
+        if (lookahead().has_value()) return false;
+        setErrorInfo(errorInfo, "Error: expected 'pattern'", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+        return false;
+    }
+
+	//match open parenthesis (
+    if (!match_token(TokenType::ParStart)) {
+        if (lookahead().has_value()) return false;
+        setErrorInfo(errorInfo, "Error: expected an open parenthesis '(' following pattern", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+        return false;
+    }
+
+    //match loop contents
+    std::vector<ExprPtr> subBeats;
+	while (lookahead().has_value() && lookahead()->type != TokenType::ParEnd) {
+		ExprPtr subBeat = parse_additive_expr();
+        subBeats.push_back(subBeat);
+	}
+
+	//match closing parenthesis )
+	if (!match_token(TokenType::ParEnd)) {
+		if (lookahead().has_value()) return false;
+		setErrorInfo(errorInfo, "Error: expected a closing parenthesis ')'", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+		return false;
+	}
+
+    //check pattern has stuff in it
+	if (subBeats.empty()) {
+		setErrorInfo(errorInfo, "Error: pattern is empty", lookahead(-2)->startPos, lookahead(-2)->endPos, "");
+		return false;
+	}
+
+    AST->statements.push_back(new PatternNode(subBeats));
+    return true;
+}
+
+
+bool Parser::parse_let() {
+    //match let
+	if (!match_token(TokenType::Let)) {
+		if (lookahead().has_value()) return false;
+		setErrorInfo(errorInfo, "Error: expected 'let'", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+		return false;
+	}
+
+    //match variable id
+	std::optional<Token> idToken = lookahead();
+	if(!idToken.has_value() || !match_token(TokenType::Id)) {
+		setErrorInfo(errorInfo, "Error: expected an identifier after 'let'", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+    }
+
+    //match equals
+    if (!match_token(TokenType::Equals)) {
+		setErrorInfo(errorInfo, "Error: expected '=' after variable name", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+    }
+
+    //match the expression to assign to the variable
+	ExprPtr value = parse_additive_expr();
+	if (!value) return false;   //error set by recursive call
+
+	AST->statements.push_back(new LetNode(idToken->idValue, value));
+	return true;
+}
+
+
+bool Parser::parse_loop() {
+    //match open bracket [
+    if (!match_token(TokenType::LStart)) {
+        setErrorInfo(errorInfo, "Error: expected loop open bracket", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+        return false;
+    }
+
+    //parse loop body
+    //this is gonna be janky. The loop's body is statements, not expressions, but our parse_statement method places
+	//parsed statements directly into the AST. So we need to parse statements until we hit the closing bracket,
+	//pull them out of the AST, and put them into the loop's body.
+    std::vector<StatementPtr> loopBody;
+    int bodyElements = 0;
+	while (lookahead().has_value() && lookahead()->type != TokenType::LEnd) {
+		bool successful = parse_statement();
+        bodyElements++;
+
+		
+		if (!successful) return false;
+        if (errorInfo->message == "Error: missing comma") {
+            //scrub the false error related to not having a comma at the end of a string of statements in the loop 
+            setErrorInfo(errorInfo, "", 0, 0, "");
+        }
+
+        //all other errors should be real
+		if (errorInfo->message != "") return false;
+	}
+
+	for (int i = 0; i < bodyElements; i++) {
+        //TODO does this load them into the loop backwards, or is my print method backwards?
+		loopBody.push_back(AST->statements.back());
+		AST->statements.pop_back();
+	}
+
+    //match closing bracket ]
+	if (!match_token(TokenType::LEnd)) {
+		setErrorInfo(errorInfo, "Error: expected loop close bracket", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+		return false;
+	}
+
+    //mmatch loop iteration count
+	ExprPtr iterations = parse_additive_expr();
+    if (!iterations) {
+		setErrorInfo(errorInfo, "Error: missing loop iteration count", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+        return false;
+    }
+
+	AST->statements.push_back(new LoopNode(loopBody, iterations));
+    return true;
+}
+
+
+ExprPtr Parser::parse_additive_expr() {
+	ExprPtr left = parse_multiplicative_expr();
+    ExprPtr right = nullptr;
+	if (!left) return nullptr;
+
+    //optional right side of the expression
+    auto currentToken = lookahead();
+    if (!currentToken) return left;
+
+    TokenType opType = currentToken->type;
+	if (opType == TokenType::Add || opType == TokenType::Sub) {
+        match_token(opType);
+		right = parse_additive_expr();
+        if (!right) {
+			setErrorInfo(errorInfo, "Error: expected an expression after +/-", lookahead()->startPos, lookahead()->endPos, "");
+			return nullptr;
+        }
+        left = new AdditiveExprNode(left, right, opType == TokenType::Add ? AdditiveExprNode::Op::Add : AdditiveExprNode::Op::Subtract);
+	}
+
+    return left;
+}
+
+
+ExprPtr Parser::parse_multiplicative_expr() {
+    ExprPtr left = parse_primary_expr();
+    ExprPtr right = nullptr;
+    if (!left) return nullptr;
+
+    auto currentToken = lookahead();
+    if (!currentToken) return left; //no mo to ko
+
+    TokenType opType = currentToken->type;
+    if (opType == TokenType::Mul || opType == TokenType::Div) {
+        match_token(opType);
+        right = parse_multiplicative_expr();
+        if (!right) {
+            setErrorInfo(errorInfo, "Error: expected an expression after operation", lookahead()->startPos, lookahead()->endPos, "");
+            return nullptr;
+        }
+        left = new MultiplicativeExprNode(left, right, opType == TokenType::Mul ? MultiplicativeExprNode::Op::Multiply : MultiplicativeExprNode::Op::Divide);
+    }
+
+    return left;
+}
+
+
+ExprPtr Parser::parse_primary_expr() {
+    auto next = lookahead();
+    //parse ints
+    if (next.has_value() && next->type == TokenType::Num) {
+        int value = next->numValue; 
+        match_token(TokenType::Num);
+        return new PrimaryExprNode(value);
+    }
+    //parse variables
+	else if (next.has_value() && next->type == TokenType::Id) {
+		std::string varName = next->idValue;
+		match_token(TokenType::Id);
+		return new PrimaryExprNode(varName);
+	}
+    //parse rands
+    else if (next.has_value() && next->type == TokenType::Rand) {
+        //match rand token
+		match_token(TokenType::Rand);
+
+		//match open parenthesis (
+        if (!match_token(TokenType::ParStart)) {
+            setErrorInfo(errorInfo, "Error: expected an open parenthesis '(' following 'rand'", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+            return nullptr;
+        }
+
+        //match rand's min expr
+		ExprPtr min = parse_additive_expr();
+        if (!min) return nullptr;
+        
+        //match rand's max expr
+		ExprPtr max = parse_additive_expr();
+		if (!max) return nullptr;
+
+		//match closing parenthesis )
+        if (!match_token(TokenType::ParEnd)) {
+            setErrorInfo(errorInfo, "Error: expected a closing parenthesis ')'", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+            return nullptr;
+        }
+
+		return new RandomNode(min, max);
+    }
+	//parse grouped expressions
+	else if (next.has_value() && next->type == TokenType::ParStart) {
+		//match open parenthesis (
+		match_token(TokenType::ParStart);
+
+		//parse the inner expression
+		ExprPtr grouped = parse_additive_expr();
+		if (!grouped) return nullptr;
+
+		//match closing parenthesis )
+		if (!match_token(TokenType::ParEnd)) {
+			setErrorInfo(errorInfo, "Error: expected a closing parenthesis ')'", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+			return nullptr;
+		}
+
+		return new PrimaryExprNode(grouped);
+	}
+    else {
+        if (!next.has_value() && lookahead(-1).has_value()) {
+			//when they have a statement with a missing number or expression (for example, a note with no duration)
+            setErrorInfo(errorInfo, "Error: statement is missing a number/expression after this", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+        }
+        else {
+            setErrorInfo(errorInfo, "Error: unrecognized expression", next->startPos, next->endPos, "");
+        }
+        return nullptr;
+    }
+}
 
 
 
@@ -405,7 +646,7 @@ ExprNode* createExprRecursive(int depth = 0) {
         //additive expression: (left + right) or (left - right)
         ExprNode* left = createExprRecursive(depth + 1);
         ExprNode* right = createExprRecursive(depth + 1);
-        auto op = (rand() % 2 == 0) ? AdditiveExprNode::Add : AdditiveExprNode::subtract;
+        auto op = (rand() % 2 == 0) ? AdditiveExprNode::Add : AdditiveExprNode::Subtract;
         return new AdditiveExprNode(left, right, op);
     } else if (choice == 1){
         //multiplicative expression: (left * right) or (left / right)
@@ -438,7 +679,8 @@ ScriptPtr createRandomAST() {
 			ExprNode* dur = createExprRecursive();
 			script->statements.push_back(new NoteNode(freq, dur));
 		} else if (choice == 2) { //patternNode
-			auto pattern = new PatternNode();
+            std::vector<ExprPtr> sb = {};
+            auto pattern = new PatternNode(sb);
 			int numBeats = rand() % 4 + 2;
 			for (int j = 0; j < numBeats; ++j) {
 				pattern->subBeats.push_back(createExprRecursive());
@@ -464,12 +706,15 @@ std::vector<SongElement> evaluateSongString(std::string& songcode,
                                             std::map<std::string, float>* vars) {
     SongCodeLexer lexer(songcode);
     auto lexerToks = lexer.tokenize(errorInfo);
+    Parser parser(lexerToks, errorInfo);
+	ScriptPtr ast = parser.parse();
     juce::Logger::writeToLog(errorInfo->message);
     juce::Logger::writeToLog("-------------First pass-------------" + juce::String(lexerToks.size()));
-    juce::Logger::writeToLog(juce::String(astToString(createRandomAST())));
+    juce::Logger::writeToLog(juce::String(astToString(ast)));
     if (lexerToks.empty()) return {};
+	if (!ast) return {};
     
-    lexer.printTokens(lexerToks);
+
 
     return {};
 }

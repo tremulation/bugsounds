@@ -140,6 +140,8 @@ struct NoteNode : StatementNode {
 //patternNode: list of sub beat expresions
 struct PatternNode : StatementNode {
     std::vector<ExprPtr> subBeats;
+
+    PatternNode(const std::vector<ExprPtr>& beats) : subBeats(beats) { }
 };
 
 
@@ -166,7 +168,7 @@ struct LetNode : StatementNode {
 struct AdditiveExprNode : ExprNode {
     ExprPtr left;
     ExprPtr right;
-    enum Op{Add, subtract} op;
+    enum Op{Add, Subtract} op;
 
     AdditiveExprNode(ExprPtr l, ExprPtr r, Op op) : left(l), right(r), op(op) {}
 };
@@ -225,7 +227,7 @@ private:
 
     //parsing helpers
     bool match_token(TokenType expected);
-    std::optional<Token> lookahead(size_t offset = 0) const;
+    std::optional<Token> lookahead(int offset = 0) const;
 
     // Parsing methods
     bool parse_statement();
