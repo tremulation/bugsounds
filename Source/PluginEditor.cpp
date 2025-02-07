@@ -126,7 +126,7 @@ void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
 
     juce::String freqSongCode = frequencyEditor.getText();
     ErrorInfo errorInfo = {};
-    std::vector<SongElement> parsedSong = evaluateSongString(freqSongCode.toStdString(), &errorInfo);
+    std::vector<SongElement> parsedSong = evaluateSongString(freqSongCode.toStdString(), &errorInfo);       
     //update the UI
     //update the internal sound processor
     if (errorInfo.message.length() >= 5 && errorInfo.message.substr(0, 5) == "Error") {

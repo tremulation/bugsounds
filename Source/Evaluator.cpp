@@ -557,7 +557,12 @@ ExprPtr Parser::parse_primary_expr() {
     }
 }
 
-
+/* 
+-------------------============ AST TESTING FUNCTIONS ============-------------------
+createRandomAST() and astToString() are the most useful for testing purposes
+you could probably put the createRandomAST() function into the evaluator and spam it
+and that's pretty much unit testing
+*/
 
 namespace {
     std::string statementToString(const StatementPtr& stmt);
@@ -701,16 +706,159 @@ ScriptPtr createRandomAST() {
 }
 
 
+
+/*
+* -------------------= ========== EVALUATOR CLASS ============-------------------
+* Parses a scriptnode into a list of song elements (notes, patterns)
+*/
+
+int evaluateExpr(const ExprPtr expr, const std::map<std::string, float>* env, ErrorInfo* errorInfo) {
+    if (!expr) {
+        setErrorInfo(errorInfo, "Error: null expression node encountered", 0, 0, "");
+        return -1;
+    }
+
+    //evaluate additive expression
+    if (auto* additive = dynamic_cast<AdditiveExprNode*>(expr.get())) {
+        int left_val = evaluateExpr(additive->left, env, errorInfo);
+        if (errorInfo->message != "") return -1;
+        int right_val = evaluateExpr(additive->right, env, errorInfo);
+        if (errorInfo->message != "") return -1;
+
+        switch (additive->op) {
+        case AdditiveExprNode::Add: return left_val + right_val;
+        case AdditiveExprNode::Subtract: return left_val - right_val;
+        default:
+            setErrorInfo(errorInfo, "Error: unknown additive operator", 0, 0, "");
+            return -1;
+        }
+    }
+
+    //evaluate primary expressions
+    if (auto* inty = dynamic_cast<PrimaryExprNode*>(expr.get())) {
+        if (inty->kind == PrimaryExprNode::Integer) {
+            return inty->integerValue;
+        }
+        if (inty->kind == PrimaryExprNode::Variable) {
+            auto it = env->find(inty->variableName);
+            if (it == env->end()) {
+                setErrorInfo(errorInfo, "Error: variable used before initialization: " + inty->variableName, 0, 0, "");
+                return -1;
+            }
+            return it->second;
+        }
+        if (inty->kind == PrimaryExprNode::Grouped) {
+            return evaluateExpr(inty->groupedExpr, env, errorInfo);
+        }
+        setErrorInfo(errorInfo, "Error: can't parse primary expression", 0, 0, "");
+        return -1;
+    }
+}
+
+//usually returns 1 statement, but can return 0 to more than 1 statements (for loops)
+std::vector<SongElement> evaluateStatement(StatementPtr statement, std::map<std::string, float>* env, ErrorInfo* errorInfo, float* lastFreq) {
+    //notes
+    if (auto note = dynamic_cast<NoteNode*>(statement.get())) {
+        int freq = evaluateExpr(note->frequency, env, errorInfo);
+        if (errorInfo->message != "") return {};
+        int dur = evaluateExpr(note->duration, env, errorInfo);
+        if (errorInfo->message != "") return {};
+        float oldLastFreq = *lastFreq;
+        *lastFreq = freq;
+		//return a vector with one note
+		return { SongElement(oldLastFreq, freq, dur) };
+    }
+    //patterns
+    else if (auto pattern = dynamic_cast<PatternNode*>(statement.get())) {
+        std::vector<uint8_t> patternVec;
+        for (auto& subBeat : pattern->subBeats) {
+            int subBeatVal = evaluateExpr(subBeat, env, errorInfo);
+            if (errorInfo->message != "") return {};
+            patternVec.push_back(subBeatVal);
+        }
+        return { SongElement(patternVec) };
+    }
+    //lets
+    else if (auto let = dynamic_cast<LetNode*>(statement.get())) {
+        float val = evaluateExpr(let->value, env, errorInfo);
+        //bind val to the variable name in the env
+        if (errorInfo->message == "") {
+            env->insert({ let->id, val });
+        }
+        return {};
+    }
+    //loops
+    else if (auto loop = dynamic_cast<LoopNode*>(statement.get())) {
+        int iterations = evaluateExpr(loop->iterations, env, errorInfo);
+        if (errorInfo->message != "") return {};
+		std::vector<SongElement> loopContents;
+        for (int i = 0; i < iterations; i++) {
+			for (auto& stmt : loop->body) {
+				auto res = evaluateStatement(stmt, env, errorInfo, lastFreq);
+				if (errorInfo->message != "") return {};
+				loopContents.insert(loopContents.end(), res.begin(), res.end());
+			}
+        }
+		return loopContents;
+    }
+}
+
+
+std::vector<SongElement> evaluateScript(const ScriptPtr script, const std::map<std::string, float>* initialEnv, ErrorInfo* errorInfo) {
+    if (!script) return {};
+    std::vector<SongElement> song;
+    std::map<std::string, float> env;
+
+    //add all the variables from the script and the argument to the shared env
+    if (initialEnv) {
+        for (auto const& x : *initialEnv) {
+            env[x.first] = x.second;
+        }
+    }
+    if (script) {
+        for (auto const& x : script->variables) {
+            env[x.first] = x.second;
+        }
+    }
+    
+
+    float lastFreq = 0;
+
+    //go through each statement and evaluate it recursively
+    for (auto cur : script->statements) {
+		auto res = evaluateStatement(cur, &env, errorInfo, &lastFreq);
+		if (errorInfo->message != "") return {};
+		song.insert(song.end(), res.begin(), res.end());
+    }
+    return song;
+}
+
+
+
+
+
+
+/*
+-------------------============ MAIN FUNCTION ============-------------------
+*/
+
 std::vector<SongElement> evaluateSongString(std::string& songcode,
                                             ErrorInfo* errorInfo,
-                                            std::map<std::string, float>* vars) {
+                                            std::map<std::string, float>* vars)     {
     SongCodeLexer lexer(songcode);
     auto lexerToks = lexer.tokenize(errorInfo);
     Parser parser(lexerToks, errorInfo);
 	ScriptPtr ast = parser.parse();
-    juce::Logger::writeToLog(errorInfo->message);
-    juce::Logger::writeToLog("-------------First pass-------------" + juce::String(lexerToks.size()));
+    
+    juce::Logger::writeToLog("-------------AST-------------" + juce::String(lexerToks.size()));
     juce::Logger::writeToLog(juce::String(astToString(ast)));
+    juce::Logger::writeToLog("----------Evaluated----------");
+	auto song = evaluateScript(ast, vars, errorInfo);
+	for (auto& elem : song) {
+		juce::Logger::writeToLog(elem.toString());
+	}
+	juce::Logger::writeToLog("------------Error------------");
+    juce::Logger::writeToLog(errorInfo->message);
     if (lexerToks.empty()) return {};
 	if (!ast) return {};
     

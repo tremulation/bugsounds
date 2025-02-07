@@ -30,6 +30,20 @@ struct SongElement {
     float endFrequency = -1.0;
     float duration = -1.0;
 
+    std::string toString() {
+        if (type == Type::Note) {
+            return "Note: (freq:" + std::to_string(static_cast<int>(startFrequency)) + "-" + std::to_string(static_cast<int>(endFrequency)) +
+                ", freq: " + std::to_string(duration) + ")";
+        }
+        else {
+            std::string patternAcc = "";
+			for (auto& i : beatPattern) {
+				patternAcc += std::to_string(static_cast<int>(i)) + " ";
+			}
+			return "Pattern: (" + patternAcc + ")";
+        }
+    }
+
     // For patterns
     std::vector<uint8_t> beatPattern;
 

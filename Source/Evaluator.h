@@ -95,7 +95,7 @@ The tokens from the lexer are compiled into a tree of nodes of this structure.
 The two overarching node types are statement nodes, and expression nodes.
 
 Statement nodes will evaluate directly into a note, or a pattern (with the
-exception of variable declarations). 
+exception of variable declarations, and loops). 
 
 Expression nodes always get compiled into numbers. These numbers then form
 parts of statements (the subbeats of patterns, or the freq/dur of notes, for
@@ -123,7 +123,7 @@ struct ScriptNode : public juce::ReferenceCountedObject {
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScriptNode)
     //using a vector of statements instead of a statement list for simplicity here
     std::vector<StatementPtr> statements;
-    std::map<std::string, float> variables;
+    std::map<std::string, int> variables;
     ScriptNode() = default;
 };
 
