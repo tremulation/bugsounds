@@ -33,7 +33,7 @@ struct SongElement {
     std::string toString() {
         if (type == Type::Note) {
             return "Note: (freq:" + std::to_string(static_cast<int>(startFrequency)) + "-" + std::to_string(static_cast<int>(endFrequency)) +
-                ", freq: " + std::to_string(duration) + ")";
+                ", len: " + std::to_string(duration) + ")";
         }
         else {
             std::string patternAcc = "";

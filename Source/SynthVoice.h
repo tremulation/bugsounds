@@ -15,6 +15,7 @@
 #include "PluginProcessor.h"
 #include "SongCodeCompiler.h"
 #include "HelmholtzResonator.h"
+#include "Evaluator.h"
 
 class SynthVoice : public juce::SynthesiserVoice
 {
@@ -37,10 +38,9 @@ public:
         }
 
         //get the song from the UI code editor
-        std::string error; 
-        std::map<char, int> linkedRandValues;
-        juce::Colour freqStatusColor;
-        song = compileSongcode(songString.toStdString(), &error, linkedRandValues, freqStatusColor);
+        ErrorInfo error = {};
+        std::map<std::string, float> sharedEnv;
+		song = evaluateAST(songScript, &error, &sharedEnv);
         logCompiledSong(song);
         
         if (song.size() == 0) {
@@ -58,15 +58,7 @@ public:
         if (*apvts->getRawParameterValue("Resonator On")) {
             //don't forget to turn it on!
             resonatorEnabled = true;
-
-            resSong = compileSongcode(resString.toStdString(), &error, linkedRandValues, freqStatusColor);
-            if (resSong.size() == 0) {
-                resonatorEnabled = false;   //might lead to unexpected behavior
-            }
-            resCurIndex = 0;
-            resFreqDelta = 0;
-            resonatorFreq = resSong[0].startFrequency;
-            setupNextResNote(resSong[0]);
+            juce::Logger::writeToLog("Resonator is ON!!!!");
         }
         else {
             resonatorEnabled = false;
@@ -230,15 +222,9 @@ public:
 
     //===========================================================================
 
-    void setSongString(juce::String newSongString)  {
-        juce::Logger::writeToLog("song recieved: " + newSongString);
-        songString = newSongString;
-    }
-
-    void setResonatorString(juce::String newResonatorString) {
-        juce::Logger::writeToLog("resonator song received: " + newResonatorString);
-        resString = newResonatorString;
-    }
+	void setSongScript(juce::ReferenceCountedObjectPtr<ScriptNode> script) {
+		songScript = script;
+	}
 
     void setPipSequence(std::vector<Pip> pips) {
         pipSequence = pips;
@@ -264,6 +250,7 @@ private:
     std::vector<Pip> pipSequence;
 
     //song state
+    juce::ReferenceCountedObjectPtr<ScriptNode> songScript;
     std::vector<SongElement> song = {};
     int curElementIndex = 0;
     bool playing = false;
@@ -320,6 +307,7 @@ private:
     
 
     void setupNextNote(struct SongElement nextNote) {
+        juce::Logger::writeToLog("Starting new note");
         if (nextNote.type == SongElement::Type::Pattern) {
             beatPattern = nextNote.beatPattern;
             patternIndex = 0;

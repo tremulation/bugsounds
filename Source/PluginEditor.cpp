@@ -8,6 +8,7 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "Evaluator.h"
 
 
 //==============================================================================
@@ -126,18 +127,21 @@ void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
 
     juce::String freqSongCode = frequencyEditor.getText();
     ErrorInfo errorInfo = {};
-    std::vector<SongElement> parsedSong = evaluateSongString(freqSongCode.toStdString(), &errorInfo);       
-    //update the UI
-    //update the internal sound processor
-    if (errorInfo.message.length() >= 5 && errorInfo.message.substr(0, 5) == "Error") {
-        frequencyEditor.setError(&errorInfo);
-        audioProcessor.setFrequencyCodeString("");
-    }
-    else {
-        //TODO change to send the string if no error here
-        frequencyEditor.setError(nullptr);
-        audioProcessor.setFrequencyCodeString("");
-    }
+	std::map<std::string, float> env;
+    std::vector<SongElement> songElements;
+    juce::ReferenceCountedObjectPtr<ScriptNode> parsedSong = generateAST(freqSongCode.toStdString(), &errorInfo);
+    if (errorInfo.message != "") goto error;
+    //need to evaluate so we can report errors that only show up when you eval
+    songElements = evaluateAST(parsedSong, &errorInfo, &env);
+	if (errorInfo.message != "") goto error;
+
+    audioProcessor.setSongAST(parsedSong);
+    return;
+    
+error:
+    frequencyEditor.setError(&errorInfo);
+    audioProcessor.setSongAST(nullptr);
+    return;
 }
 
 

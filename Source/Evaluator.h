@@ -123,7 +123,6 @@ struct ScriptNode : public juce::ReferenceCountedObject {
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScriptNode)
     //using a vector of statements instead of a statement list for simplicity here
     std::vector<StatementPtr> statements;
-    std::map<std::string, int> variables;
     ScriptNode() = default;
 };
 
@@ -242,7 +241,8 @@ private:
     ExprPtr parse_primary_expr();
 };
 
+
 //implied nullptr for vars. If you don't provide a pointer to already-initialized variables, then they will be null
-std::vector<SongElement> evaluateSongString(std::string& songcode,
-                                            ErrorInfo* errorInfo,
-                                            std::map<std::string, float>* vars = nullptr);
+ScriptPtr                generateAST(std::string& songcode, ErrorInfo* errorInfo);
+
+std::vector<SongElement> evaluateAST(ScriptPtr ast, ErrorInfo* errorInfo, std::map<std::string, float>* vars);
