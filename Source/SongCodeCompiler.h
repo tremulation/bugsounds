@@ -53,9 +53,3 @@ struct SongElement {
     SongElement(const std::vector<uint8_t>& pattern)
         : type(Type::Pattern), beatPattern(pattern) {}
 };
-
-
-std::vector<SongElement> compileSongcode(const std::string& songcode, 
-                                         std::string* errorMsg,
-                                         std::map<char, int>& linkedRandValues,
-                                         juce::Colour& statusColor);

@@ -6,14 +6,14 @@
 class BugsoundsAudioProcessor;
 class BugsoundsAudioProcessorEditor;
 
-// ==============================================================================
+//==============================================================================
 class PowerButtonLookAndFeel : public juce::LookAndFeel_V4 {
 public:
     void drawToggleButton(juce::Graphics& g, juce::ToggleButton& button,
         bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 };
 
-// ==============================================================================
+//==============================================================================
 class ResonatorKnobRack : public juce::Component {
 public:
     ResonatorKnobRack(BugsoundsAudioProcessor& processor, BugsoundsAudioProcessorEditor& editor);
@@ -32,17 +32,31 @@ private:
         const juce::String& paramName,
         std::unique_ptr<SliderAttachment>& attachment);
 
-    //member variables
+    // Member variables
     const int margin = 5;
-    juce::Slider resonatorQKnob, resonatorGainKnob, resonatorHarmonicsKnob;
-    juce::Label titleLabel, qLabel, gainLabel, harmonicsLabel;
+
+    // --- Top row knobs ---
+    // These will control Bandwidth, Gain, and Mix.
+    juce::Slider resonatorQKnob, resonatorGainKnob, resonatorMixKnob;
+    juce::Label qLabel, gainLabel, mixLabel;
+
+    // --- Bottom row knobs ---
+    // These will control Harmonic Emphasis, Overtones, and Drive.
+    juce::Slider resonatorHarmonicsKnob, resonatorOvertoneKnob, resonatorDriveKnob;
+    juce::Label harmonicsLabel, overtoneLabel, driveLabel;
+
     PowerButtonLookAndFeel powerButtonLAF;
     std::unique_ptr<juce::ToggleButton> powerButton;
 
     std::unique_ptr<SliderAttachment> qAttachment;
     std::unique_ptr<SliderAttachment> gainAttachment;
+    std::unique_ptr<SliderAttachment> mixAttachment;
     std::unique_ptr<SliderAttachment> harmonicsAttachment;
+    std::unique_ptr<SliderAttachment> overtoneAttachment;
+    std::unique_ptr<SliderAttachment> driveAttachment;
     std::unique_ptr<ButtonAttachment> powerButtonAttachment;
+
+    juce::Label titleLabel;
 
     BugsoundsAudioProcessor& audioProcessor;
     BugsoundsAudioProcessorEditor& audioEditor;

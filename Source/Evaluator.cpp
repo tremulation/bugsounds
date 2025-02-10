@@ -862,6 +862,15 @@ std::vector<SongElement> evaluateScript(const ScriptPtr script, std::map<std::st
 		if (errorInfo->message != "") return {};
 		song.insert(song.end(), res.begin(), res.end());
     }
+
+	//clear initialEnv, then copy env into it
+	if (initialEnv) {
+		initialEnv->clear();
+		for (auto const& x : env) {
+			(*initialEnv)[x.first] = x.second;
+		}
+    }
+
     return song;
 }
 

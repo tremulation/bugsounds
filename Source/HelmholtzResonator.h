@@ -11,20 +11,24 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <cmath>
+#include <algorithm>
 
-//digital biquad filter
+//not a helmholtz resonator anymore. 
+//bank of resonators, one on the fundamental, and a couple more on the harmonics.
+//based on the max patch in prototypes
 class HelmholtzResonator {
 public:
     HelmholtzResonator() {
         reset();
     }
 
-
     void reset() {
-        z1 = 0.0f;
-        z2 = 0.0f;
+		for (int i = 0; i < 8; i++) {
+			delays[i][0] = 0.0f;
+            delays[i][1] = 0.0f;
+		}
     }
-
 
     void prepareToPlay(double sampleRate) {
         this->sampleRate = sampleRate;
@@ -33,40 +37,55 @@ public:
 
 
     float processSamples(float input, float freq) {
-        freq = juce::jlimit(20.0f, static_cast<float>(sampleRate / 2.0f), freq);
+        if (freq <= 0.0f || sampleRate <= 0.0f) return 0.0f;
 
-        //calculate coefficient values
-        const float w0 = juce::MathConstants<float>::twoPi * freq / static_cast<float>(sampleRate);
-        const float sinW0 = std::sin(w0);
-        const float cosW0 = std::cos(w0);
-        const float alpha = sinW0 / (2.0f * Q);
+        float twopi = juce::MathConstants<float>::twoPi;
+        float totalOut = 0.0f;
+        float sumWeights = 0.0f;
 
-        //calculate normalized filter coefficients
-        const float b0 = alpha / (1.0f + alpha);
-        const float b1 = 0.0f;
-        const float b2 = -alpha / (1.0f + alpha);
-        const float a1 = -2.0f * cosW0 / (1.0f + alpha);
-        const float a2 = (1.0f - alpha) / (1.0f + alpha);
+        for (int n = 1; n <= overtoneNum; ++n) {
+            float currentFreq = freq * n;
+            if (currentFreq >= sampleRate / 2) break;
 
-        //process sample w/ direct form II
-        const float v = input - a1 * z1 - a2 * z2;
-        const float output = b0 * v + b1 * z1 + b2 * z2;
+            float bandwidthRadians = (bandwidth / sampleRate) * twopi;
+            float peakRadius = 1.0f - (bandwidthRadians / 2.0f);
+            float freqRadians = (currentFreq / sampleRate) * twopi;
+            float peakLocation = std::acos((2.0f * peakRadius * std::cos(freqRadians)) / (1.0f + peakRadius * peakRadius));
+            float normFactor = (1.0f - peakRadius * peakRadius) * std::sin(peakLocation) * 1.4f;
 
-        //update state
-        z2 = z1; 
-        z1 = v;
+            float weight = 1.0f / n; 
+            sumWeights += weight;
 
-        return output;
+            float& h1 = delays[n - 1][0];
+            float& h2 = delays[n - 1][1];
+
+            float out_n = (input * normFactor) + (2.0f * peakRadius * std::cos(peakLocation) * h2) - (h1 * peakRadius * peakRadius);
+
+            h1 = h2;
+            h2 = out_n;
+
+            totalOut += out_n * weight;
+        }
+
+        return totalOut * (gain / sumWeights); // Normalize output
     }
 
-    float Q = 10.0f;    //peak sharpness
-
-private:
+    //parameters. set them in rendernextblock
+    float bandwidth        = 100.0f; //bandwidth: peak sharpness, in Hz. 0 to 500. 100 default.
+	float harmonicEmphasis = 0.0f;   //how much to emphasize the harmonics 0 to 1, default 0.
+	int   overtoneNum      = 3;      //number of overtone resonators to add. 1 to 8. default 1
+    float drive            = .5;     //how much saturation to add to the output signal. 0 to 1, default .5
+    float mix              = .5;     //how much of the original signal to mix in. 0 to 1, default .5
+	float gain             = 1.0f;   //output gain. 0 to 1, default 0.5
     double sampleRate = 44100.0f;
 
-    //two delay elements
-    float z1 = 0.0f;
-    float z2 = 0.0f;
+private:
+    
+
+    //2d array for storing all the delay elements:
+    //1st element is the fundamental, with the rest being harmonics above the fundamental
+	//2*fundamental, 3*fundamental, 4*fundamental, etc.
+    float delays[8][2];
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(HelmholtzResonator)
 };

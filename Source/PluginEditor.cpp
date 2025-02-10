@@ -82,66 +82,55 @@ void BugsoundsAudioProcessorEditor::resized()
 
     //right area for controls
     clickSettingsRack.setBounds(area.removeFromTop(rackHeight));
-    resonatorKnobRack.setBounds(area.removeFromTop(rackHeight));
+    resonatorKnobRack.setBounds(area.removeFromTop(rackHeight * 2 - 40)); //30 is title height
 }
 
 
 //if this doesn't work implement a fifo queue for transferring the string w/out locks
 void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
-    //juce::String freqSongcode = frequencyEditor.getText();
-    //std::string freqStatusMsg;
-    //juce::Colour freqStatusColor;
-    //std::map<char, int> linkedRandValues;
-    //std::vector<SongElement> parsedSong = compileSongcode(freqSongcode.toStdString(),
-    //                                                       &freqStatusMsg,
-    //                                                       linkedRandValues,
-    //                                                       freqStatusColor);
-    //
-    //frequencyEditor.setErrorMessage(freqStatusMsg, freqStatusColor);
-    //
-    //if (freqStatusMsg.substr(0, 5) != "Error") {
-    //    audioProcessor.setFrequencyCodeString(frequencyEditor.getText());
-    //}
-    //else {
-    //    audioProcessor.setFrequencyCodeString("");
-    //}
-
-    ////set up resonator if it is on
-    //if (*audioProcessor.apvts.getRawParameterValue("Resonator On")) {
-    //    juce::String resSongcode = resonatorEditor.getText();
-    //    std::string resStatusMsg;
-    //    juce::Colour resStatusColor;
-    //    std::vector<SongElement> parsedResSong = compileSongcode(resSongcode.toStdString(),
-    //        &resStatusMsg,
-    //        linkedRandValues,
-    //        resStatusColor);
-    //    resonatorEditor.setErrorMessage(resStatusMsg, resStatusColor);
-    //    if (resStatusMsg.substr(0, 5) != "Error") {
-    //        audioProcessor.setResonatorCodeString(resonatorEditor.getText());
-    //    }
-    //    else {
-    //        audioProcessor.setResonatorCodeString("");
-    //    }
-    //}
-    
-
     juce::String freqSongCode = frequencyEditor.getText();
     ErrorInfo errorInfo = {};
 	std::map<std::string, float> env;
     std::vector<SongElement> songElements;
+
+    //compile check freq songcode 
     juce::ReferenceCountedObjectPtr<ScriptNode> parsedSong = generateAST(freqSongCode.toStdString(), &errorInfo);
-    if (errorInfo.message != "") goto error;
+    if (errorInfo.message != "") goto freqError;
     //need to evaluate so we can report errors that only show up when you eval
     songElements = evaluateAST(parsedSong, &errorInfo, &env);
-	if (errorInfo.message != "") goto error;
+	if (errorInfo.message != "") goto freqError;
 
+
+    //compile check res songcode
+    if (*audioProcessor.apvts.getRawParameterValue("Resonator On")) {
+        juce::String resSongCode = resonatorEditor.getText();
+        juce::ReferenceCountedObjectPtr<ScriptNode> parsedResSong = generateAST(resSongCode.toStdString(), &errorInfo);
+        if (errorInfo.message != "") goto resError;
+		songElements = evaluateAST(parsedResSong, &errorInfo, &env);
+        if (errorInfo.message != "") goto resError;
+        //set resonator AST/error message
+        audioProcessor.setResAST(parsedResSong);
+        resonatorEditor.setError(nullptr);
+    }
+    
+	//now we can send the freq song, since res compiled
+    frequencyEditor.setError(nullptr);
     audioProcessor.setSongAST(parsedSong);
     return;
     
-error:
+    //two failure states. mostly the same, besides error message handling
+freqError:
     frequencyEditor.setError(&errorInfo);
     audioProcessor.setSongAST(nullptr);
+	audioProcessor.setResAST(nullptr);
     return;
+
+resError:
+	frequencyEditor.setError(nullptr);
+	resonatorEditor.setError(&errorInfo);
+	audioProcessor.setSongAST(nullptr);
+    audioProcessor.setResAST(nullptr);
+	return;
 }
 
 

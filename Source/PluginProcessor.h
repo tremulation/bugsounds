@@ -68,6 +68,10 @@ public:
     void setSongAST(juce::ReferenceCountedObjectPtr<ScriptNode> scriptAST) {
 		myVoice->setSongScript(scriptAST);
     }
+
+	void setResAST(juce::ReferenceCountedObjectPtr<ScriptNode> scriptAST) {
+		myVoice->setResScript(scriptAST);
+	}
     
     void setPipSequence(std::vector<Pip> pips) {
         myVoice->setPipSequence(pips);

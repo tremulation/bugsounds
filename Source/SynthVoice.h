@@ -55,10 +55,17 @@ public:
         }
         
         //get the resonator song from the other editor
+		
         if (*apvts->getRawParameterValue("Resonator On")) {
             //don't forget to turn it on!
-            resonatorEnabled = true;
-            juce::Logger::writeToLog("Resonator is ON!!!!");
+            resonatorEnabled = false;
+            resonator.reset();
+			resSong = evaluateAST(resScript, &error, &sharedEnv);
+			if (resSong.size() != 0) {
+				setupNextResNote(resSong[0]);
+				resCurIndex = 0;
+                resonatorEnabled = true;
+			}
         }
         else {
             resonatorEnabled = false;
@@ -167,8 +174,13 @@ public:
 
             //if the resonator is on, then pass the click audio through it
             if (resonatorEnabled) {
-                resonator.Q = *apvts->getRawParameterValue("Resonator Q");
-               clickOutput = resonator.processSamples(clickOutput, ((float)resonatorFreq));
+                resonator.bandwidth = *apvts->getRawParameterValue("Resonator Q");
+                resonator.harmonicEmphasis = *apvts->getRawParameterValue("Resonator Harmonic Emphasis");
+				resonator.overtoneNum = *apvts->getRawParameterValue("Resonator Overtone Number");
+				resonator.drive = *apvts->getRawParameterValue("Resonator Drive");
+				resonator.mix = *apvts->getRawParameterValue("Resonator Mix");
+				resonator.gain = *apvts->getRawParameterValue("Resonator Gain");
+                clickOutput = resonator.processSamples(clickOutput, ((float)resonatorFreq));
             }
 
             //add the clicks to the output buffer
@@ -226,6 +238,10 @@ public:
 		songScript = script;
 	}
 
+	void setResScript(juce::ReferenceCountedObjectPtr<ScriptNode> script) {
+		resScript = script;
+	}
+
     void setPipSequence(std::vector<Pip> pips) {
         pipSequence = pips;
         juce::Logger::writeToLog("Pips received. First freq: " + juce::String(pipSequence[0].frequency));
@@ -258,6 +274,7 @@ private:
 
     //resonator song state
     HelmholtzResonator resonator;
+    juce::ReferenceCountedObjectPtr<ScriptNode> resScript;
     std::vector<SongElement> resSong = {};
     int resCurIndex = 0;
     int resSamplesRemaining = 0;
@@ -355,10 +372,11 @@ private:
             
             auto startingFreq = nextNote.startFrequency;
             auto endingFreq = nextNote.endFrequency;
-            auto noteLengthInSamples = (nextNote.duration / 1000) * getSampleRate();
+            auto noteLengthInSamples = (nextNote.duration / 1000.0) * getSampleRate();
             juce::Logger::writeToLog("res note: " + juce::String(endingFreq) + ", " + juce::String(noteLengthInSamples));
             resFreqDelta = (endingFreq - startingFreq) / noteLengthInSamples;
             resSamplesRemaining = (int)noteLengthInSamples;
+            resonatorFreq = startingFreq;  // Reset the frequency for the new note!
         }
     }
 
