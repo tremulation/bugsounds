@@ -125,13 +125,13 @@ void ResonatorKnobRack::resized()
 
     // --- Divide remaining space into two rows for the knobs ---
     int numColumns = 3;
-    int numRows = 2;
+    int numRows = 1;
     int labelHeight = 20;
     const int upwardOffset = 10;
 
     // Split the area into top and bottom rows
-    auto topRowBounds = bounds.removeFromTop(bounds.getHeight() / 2);
-    auto bottomRowBounds = bounds; // remaining area
+    auto topRowBounds = bounds.removeFromTop(bounds.getHeight());
+
 
     // --- Top Row Knobs ---
     // These are for Bandwidth, Gain, and Mix.
