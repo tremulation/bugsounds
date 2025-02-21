@@ -5,7 +5,7 @@
     <PLUGIN name="Audio Input" descriptiveName="" format="Internal" category="I/O devices"
             manufacturer="JUCE" version="1.0" file="" uniqueId="246006c0"
             isInstrument="0" fileTime="0" infoUpdateTime="0" numInputs="0"
-            numOutputs="8" isShell="0" hasARAExtension="0" uid="246006c0"/>
+            numOutputs="2" isShell="0" hasARAExtension="0" uid="246006c0"/>
     <STATE>0.</STATE>
     <LAYOUT>
       <INPUTS>
@@ -47,10 +47,10 @@
     </LAYOUT>
   </FILTER>
   <FILTER uid="6" x="0.3775" y="0.4271255060728745" useARA="0" uiLastX_Normal="79"
-          uiLastY_Normal="247" uiopen_Normal="0">
+          uiLastY_Normal="247" uiopen_Normal="1">
     <PLUGIN name="bugsounds" format="VST3" category="Instrument|Synth" manufacturer="yourcompany"
             version="1.0.0" file="C:\Users\Taro\Desktop\bugsounds\Builds\VisualStudio2022\x64\Debug\VST3\bugsounds.vst3\Contents\x86_64-win\bugsounds.vst3"
-            uniqueId="6a8e12d" isInstrument="1" fileTime="194edf2f1d9" infoUpdateTime="194edf58890"
+            uniqueId="6a8e12d" isInstrument="1" fileTime="19503201f0a" infoUpdateTime="19503214133"
             numInputs="0" numOutputs="2" isShell="0" hasARAExtension="0"
             uid="e95caf69"/>
     <STATE>191.VMjLgXK....O+fWarAhckI2bo8la8HRLt.iHfTlai8FYo41Y8HRUTYTK3HxO9.BOVMEUy.Ea0cVZtMEcgQWY9vSRC8Vav8lak4Fc9XCLt3hKt3hKt3hKt3hYRUUSTEETIckVwTjQisVTTgkdEYjKAQjYPQSPWgUdMcjKAQjct3hdA4hKt3hKt3hKtnTUv.UQAslXuk0UXoWUFE0YQcEV77RRC8Vav8lak4Fc9vyKVMEUy.Ea0cVZtMEcgQWY9..</STATE>
@@ -69,7 +69,7 @@
     <STATE>0.</STATE>
     <LAYOUT>
       <INPUTS>
-        <BUS index="0" layout="L R C Lfe Lss Rss Lrs Rrs"/>
+        <BUS index="0" layout="L R"/>
       </INPUTS>
       <OUTPUTS>
         <BUS index="0" layout="disabled"/>

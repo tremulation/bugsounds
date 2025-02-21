@@ -14,7 +14,7 @@
 #include "PipStructs.h"
 #include "PluginProcessor.h"
 #include "SongCodeCompiler.h"
-#include "HelmholtzResonator.h"
+#include "HarmonicResonator.h"
 #include "Evaluator.h"
 
 class SynthVoice : public juce::SynthesiserVoice
@@ -59,12 +59,12 @@ public:
         if (*apvts->getRawParameterValue("Resonator On")) {
             //don't forget to turn it on!
             resonatorEnabled = false;
-            resonator.reset();
 			resSong = evaluateAST(resScript, &error, &sharedEnv);
 			if (resSong.size() != 0) {
 				setupNextResNote(resSong[0]);
 				resCurIndex = 0;
                 resonatorEnabled = true;
+                resonator.reset();
 			}
         }
         else {
@@ -174,12 +174,9 @@ public:
 
             //if the resonator is on, then pass the click audio through it
             if (resonatorEnabled) {
-                resonator.bandwidth = *apvts->getRawParameterValue("Resonator Q");
-                resonator.harmonicEmphasis = *apvts->getRawParameterValue("Resonator Harmonic Emphasis");
-				resonator.overtoneNum = *apvts->getRawParameterValue("Resonator Overtone Number");
-				resonator.drive = *apvts->getRawParameterValue("Resonator Drive");
-				resonator.mix = *apvts->getRawParameterValue("Resonator Mix");
-				resonator.gain = *apvts->getRawParameterValue("Resonator Gain");
+                resonator.overtoneNum = (*apvts->getRawParameterValue("Resonator Overtone Number"));
+				resonator.bandwidth = (*apvts->getRawParameterValue("Resonator Q"));
+				resonator.gain = (*apvts->getRawParameterValue("Resonator Gain"));
                 clickOutput = resonator.processSamples(clickOutput, ((float)resonatorFreq));
             }
 
@@ -273,7 +270,7 @@ private:
     int samplesRemainingInNote = 0; 
 
     //resonator song state
-    HelmholtzResonator resonator;
+    HarmonicResonator resonator;
     juce::ReferenceCountedObjectPtr<ScriptNode> resScript;
     std::vector<SongElement> resSong = {};
     int resCurIndex = 0;
@@ -338,7 +335,7 @@ private:
                 patternPhaseDivisor = beatPattern[0];
             }
             
-            phase = 1.0;    //trigger click on next sample. not sure this's necessary
+            phase = 0.0f;
 
             //advance to next note
             curElementIndex++;

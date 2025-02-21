@@ -212,28 +212,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
 		juce::NormalisableRange<float>(0.0f, 200, 1.0f, 1.0f),
 		100.0f));
 
-	layout.add(std::make_unique<juce::AudioParameterFloat>(
-		"Resonator Harmonic Emphasis",
-		"Resonator Harmonic Emphasis",
-		juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
-		1.0f));
-
 	layout.add(std::make_unique<juce::AudioParameterInt>(
 		"Resonator Overtone Number",
 		"Resonator Overtone Number",
 		1, 8, 0));
-
-	layout.add(std::make_unique<juce::AudioParameterFloat>(
-		"Resonator Drive",
-		"Resonator Drive",
-		juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
-		0.5f));
-
-	layout.add(std::make_unique<juce::AudioParameterFloat>(
-		"Resonator Mix",
-		"Resonator Mix",
-		juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
-		0.5f));
 
 	layout.add(std::make_unique<juce::AudioParameterFloat>(
 		"Resonator Gain",

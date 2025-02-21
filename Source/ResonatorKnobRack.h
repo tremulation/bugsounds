@@ -36,24 +36,16 @@ private:
     const int margin = 5;
 
     // --- Top row knobs ---
-    // These will control Bandwidth, Gain, and Mix.
-    juce::Slider resonatorQKnob, resonatorGainKnob, resonatorMixKnob;
-    juce::Label qLabel, gainLabel, mixLabel;
-
-    // --- Bottom row knobs ---
-    // These will control Harmonic Emphasis, Overtones, and Drive.
-    juce::Slider resonatorHarmonicsKnob, resonatorOvertoneKnob, resonatorDriveKnob;
-    juce::Label harmonicsLabel, overtoneLabel, driveLabel;
+    // These will control Bandwidth, Gain, and overtoneNum
+    juce::Slider resonatorQKnob, resonatorGainKnob, resonatorOvertoneKnob;
+    juce::Label qLabel, gainLabel, mixLabel, overtoneLabel;
 
     PowerButtonLookAndFeel powerButtonLAF;
     std::unique_ptr<juce::ToggleButton> powerButton;
 
     std::unique_ptr<SliderAttachment> qAttachment;
     std::unique_ptr<SliderAttachment> gainAttachment;
-    std::unique_ptr<SliderAttachment> mixAttachment;
-    std::unique_ptr<SliderAttachment> harmonicsAttachment;
     std::unique_ptr<SliderAttachment> overtoneAttachment;
-    std::unique_ptr<SliderAttachment> driveAttachment;
     std::unique_ptr<ButtonAttachment> powerButtonAttachment;
 
     juce::Label titleLabel;

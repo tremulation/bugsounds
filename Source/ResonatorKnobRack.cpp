@@ -15,43 +15,41 @@
 void PowerButtonLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& button,
     bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
-    // Get the full bounds of the button.
+    //get the full bounds of the button.
     auto bounds = button.getLocalBounds().toFloat();
 
-    // Fill the background with green when toggled on, dark grey otherwise.
+    //fill the background with green when toggled on, dark grey otherwise.
     g.setColour(button.getToggleState() ? juce::Colours::green : juce::Colours::darkgrey);
     g.fillRect(bounds);
 
-    // Draw a white border around the button.
+    //draw a white border around the button.
     g.setColour(juce::Colours::white);
     g.drawRect(bounds, 1.0f);
 
-    // Define the icon area with minimal reduction so the circle is as big as possible.
+    //define the icon area with minimal reduction so the circle is as big as possible.
     auto iconBounds = bounds.reduced(2);
 
-    // Calculate the maximum square that fits within iconBounds.
+    //calculate the maximum square that fits within iconBounds.
     float diameter = std::min(iconBounds.getWidth(), iconBounds.getHeight()) * 0.95f; // 95% of available space
     juce::Rectangle<float> ellipseBounds;
     ellipseBounds.setSize(diameter, diameter);
     ellipseBounds.setCentre(iconBounds.getCentre());
 
-    // Draw the full circle.
+    //draw the full circle.
     g.setColour(juce::Colours::white);
     g.drawEllipse(ellipseBounds, 2.0f);
 
-    // Now "cut out" the top portion of the circle.
-    // We'll draw a thick vertical line in the background color to mask the top stroke.
+
     float centerX = ellipseBounds.getCentreX();
-    // Start the line slightly above the top of the ellipse, and extend it to the vertical center.
     float lineTop = ellipseBounds.getY() - 1.0f;
     float lineBottom = ellipseBounds.getCentreY();
 
-    // Draw the thick line (mask) in the background color.
+    //draw the thick line (mask) in the background color.
     g.setColour(button.getToggleState() ? juce::Colours::green : juce::Colours::darkgrey);
     float thickLineThickness = 6.0f;  // Increased thickness to fully cover the top stroke.
     g.drawLine(centerX, lineTop, centerX, lineBottom, thickLineThickness);
 
-    // Draw the thinner white line along the same path to create the power symbol's indicator.
+    //draw the thinner white line along the same path to create the power symbol's indicator.
     g.setColour(juce::Colours::white);
     float thinLineThickness = 2.0f;
     g.drawLine(centerX, lineTop, centerX, lineBottom, thinLineThickness);
@@ -74,12 +72,8 @@ ResonatorKnobRack::ResonatorKnobRack(BugsoundsAudioProcessor& processor, Bugsoun
     // --- Top row: Bandwidth, Gain, Mix ---
     initializeKnob(resonatorQKnob, qLabel, "Bandwidth", "Resonator Q", qAttachment);
     initializeKnob(resonatorGainKnob, gainLabel, "Gain", "Resonator Gain", gainAttachment);
-    initializeKnob(resonatorMixKnob, mixLabel, "Mix", "Resonator Mix", mixAttachment);
-
-    // --- Bottom row: Harmonic Emphasis, Overtones, Drive ---
-    initializeKnob(resonatorHarmonicsKnob, harmonicsLabel, "Harmonics", "Resonator Harmonic Emphasis", harmonicsAttachment);
     initializeKnob(resonatorOvertoneKnob, overtoneLabel, "Layers", "Resonator Overtone Number", overtoneAttachment);
-    initializeKnob(resonatorDriveKnob, driveLabel, "Drive", "Resonator Drive", driveAttachment);
+    // --- Bottom row: Harmonic Emphasis, Overtones, Drive ---
 
     powerButtonAttachment = std::make_unique<ButtonAttachment>(
         audioProcessor.apvts, "Resonator On", *powerButton);
@@ -152,26 +146,9 @@ void ResonatorKnobRack::resized()
     resonatorGainKnob.setBounds(gainArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, -upwardOffset));
     gainLabel.setBounds(gainArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
 
-    auto mixArea = topRowBounds;
-    resonatorMixKnob.setBounds(mixArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, -upwardOffset));
-    mixLabel.setBounds(mixArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
-
-    // --- Bottom Row Knobs ---
-    // These are for Harmonic Emphasis, Overtones, and Drive.
-    knobWidth = bottomRowBounds.getWidth() / numColumns;
-    knobSize = std::min(knobWidth, bottomRowBounds.getHeight()) - 20;
-
-    auto harmonicArea = bottomRowBounds.removeFromLeft(knobWidth);
-    resonatorHarmonicsKnob.setBounds(harmonicArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, -upwardOffset));
-    harmonicsLabel.setBounds(harmonicArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
-
-    auto overtoneArea = bottomRowBounds.removeFromLeft(knobWidth);
+    auto overtoneArea = topRowBounds.removeFromLeft(knobWidth);
     resonatorOvertoneKnob.setBounds(overtoneArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, -upwardOffset));
     overtoneLabel.setBounds(overtoneArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
-
-    auto driveArea = bottomRowBounds;
-    resonatorDriveKnob.setBounds(driveArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, -upwardOffset));
-    driveLabel.setBounds(driveArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
 }
 
 void ResonatorKnobRack::initializeKnob(juce::Slider& slider, juce::Label& label,
