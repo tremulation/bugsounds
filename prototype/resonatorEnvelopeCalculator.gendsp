@@ -10,7 +10,7 @@
 		}
 ,
 		"classnamespace" : "dsp.gen",
-		"rect" : [ 909.0, 126.0, 871.0, 894.0 ],
+		"rect" : [ 949.0, 112.0, 471.0, 894.0 ],
 		"bglocked" : 0,
 		"openinpresentation" : 0,
 		"default_fontsize" : 12.0,
@@ -39,6 +39,19 @@
 		"subpatcher_template" : "",
 		"assistshowspatchername" : 0,
 		"boxes" : [ 			{
+				"box" : 				{
+					"id" : "obj-3",
+					"linecount" : 2,
+					"maxclass" : "newobj",
+					"numinlets" : 0,
+					"numoutlets" : 1,
+					"outlettype" : [ "" ],
+					"patching_rect" : [ 764.0, 112.0, 96.0, 36.0 ],
+					"text" : "in 7 @comment originalScalar"
+				}
+
+			}
+, 			{
 				"box" : 				{
 					"id" : "obj-2",
 					"linecount" : 2,
@@ -113,13 +126,13 @@
 			}
 , 			{
 				"box" : 				{
-					"code" : "//params\r\nbin     = in1;\t//current bin\r\nfunFreq = in2;\t//fundamental frequency of the resonator\r\nQ       = in3;\t//peak sharpness\r\nn       = in4;\t//number of overtones to render\r\ng       = in5;\t//peak gain\r\novertoneDecay = 0.5 / in6 ;\r\n\r\n//forward declarations\r\nmaxGain = 0;\r\ncurOvertone = 0;\r\novertoneScale = 0;\r\n\r\n//get center freq from the bin\r\nbinFreq = bin * (SAMPLERATE / vectorsize);\r\nbinFreq = binFreq / 2;\r\n\r\n//each loop is one overtone\r\nfor (i = 1; i <= n; i += 1) {\r\n\t\r\n    // funamental overtone scaling is always 1\r\n\tif(i == 1) {\r\n\t\tovertoneScale = 1;\r\n\t} else {\r\n\t\tovertoneScale = pow(overtoneDecay, i - 1);\r\n    }\r\n\r\n\t//modified lorentzian function for peak w/ modifiable width\r\n    scaledOffset = (2 * (binFreq - (funFreq * i))) / Q;\r\n    thisPeakGain = 1 + (g / (1 + pow(scaledOffset, 2))) * overtoneScale;\r\n\r\n    maxGain = max(maxGain, thisPeakGain);\r\n\r\n}\r\n\r\nout1 = maxGain;",
+					"code" : "//params\r\nbin     = in1;\t//current bin\r\nfunFreq = in2;\t//fundamental frequency of the resonator\r\nQ       = in3;\t//peak sharpness\r\nn       = in4;\t//number of overtones to render\r\ng       = in5;\t//peak gain\r\novertoneDecay = 0.5 / in6 ;\r\noriginalScalar = in7;\r\n\r\n//forward declarations\r\nmaxGain = 0;\r\ncurOvertone = 0;\r\novertoneScale = 0;\r\n\r\n//get center freq from the bin\r\nbinFreq = bin * (SAMPLERATE / vectorsize);\r\nbinFreq = binFreq / 2;\r\n\r\n//each loop is one overtone\r\nfor (i = 1; i <= n; i += 1) {\r\n\t\r\n    // funamental overtone scaling is always 1\r\n\tif(i == 1) {\r\n\t\tovertoneScale = 1;\r\n\t} else {\r\n\t\tovertoneScale = pow(overtoneDecay, i - 1);\r\n    }\r\n\r\n\t//modified lorentzian function for peak w/ modifiable width\r\n    scaledOffset = (2 * (binFreq - (funFreq * i))) / Q;\r\n    thisPeakGain = originalScalar + (g / (1 + pow(scaledOffset, 2))) * overtoneScale;\r\n\r\n    maxGain = max(maxGain, thisPeakGain);\r\n\r\n}\r\n\r\nout1 = maxGain;",
 					"fontface" : 0,
 					"fontname" : "<Monospaced>",
 					"fontsize" : 12.0,
 					"id" : "obj-6",
 					"maxclass" : "codebox",
-					"numinlets" : 6,
+					"numinlets" : 7,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
 					"patching_rect" : [ 30.000000000000057, 58.0, 694.0, 772.0 ]
@@ -168,6 +181,13 @@
 			}
 , 			{
 				"patchline" : 				{
+					"destination" : [ "obj-6", 6 ],
+					"source" : [ "obj-3", 0 ]
+				}
+
+			}
+, 			{
+				"patchline" : 				{
 					"destination" : [ "obj-4", 0 ],
 					"source" : [ "obj-6", 0 ]
 				}
@@ -187,7 +207,8 @@
 				}
 
 			}
- ]
+ ],
+		"autosave" : 0
 	}
 
 }

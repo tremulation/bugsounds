@@ -129,6 +129,10 @@ public:
 
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override {
         if (!playing) return;
+        
+		//load the raw clicks into here. Once it is full (when we have reached windowSize) process it with the resonator
+        juce::AudioBuffer<float> resonatorBuffer(1, resonator.windowSize);
+		int resonatorBufferIndex = 0;
 
         while (--numSamples >= 0) {
             // IMPULSES  --  should we place an impulse on this sample?
@@ -168,23 +172,32 @@ public:
 
             //run second-layer subclick generation on all the clicks in activeClicks
             updateActiveClicks();
-
-            //calculate the output of all currently-active clicks
             float clickOutput = renderActiveClicks();
+            
+            //-------------------- resonator stuff ---------------------
 
-            //if the resonator is on, then pass the click audio through it
             if (resonatorEnabled) {
-                resonator.overtoneNum = (*apvts->getRawParameterValue("Resonator Overtone Number"));
-				resonator.bandwidth = (*apvts->getRawParameterValue("Resonator Q"));
-				resonator.gain = (*apvts->getRawParameterValue("Resonator Gain"));
-                clickOutput = resonator.processSamples(clickOutput, ((float)resonatorFreq));
+				// send all the resonator parameters from apvts to the resonator object
+				resonator.gain = *apvts->getRawParameterValue("Resonator Gain");
+				resonator.originalScalar = *apvts->getRawParameterValue("Resonator Original Mix");
+				resonator.q = *apvts->getRawParameterValue("Resonator Q");
+				resonator.n = *apvts->getRawParameterValue("Resonator Overtone Number");
+				resonator.overtoneDecay = *apvts->getRawParameterValue("Resonator Overtone Decay");
+
+                // Push raw click sample to resonator internal processing.
+                float processedSample = resonator.processSample(clickOutput, resonatorFreq);
+                for (int channel = 0; channel < outputBuffer.getNumChannels(); channel++) {
+                    outputBuffer.addSample(channel, startSample, processedSample);
+                }
+            }
+            else {
+                // Directly add raw click audio if resonator is off.
+                for (int channel = 0; channel < outputBuffer.getNumChannels(); channel++) {
+                    outputBuffer.addSample(channel, startSample, clickOutput);
+                }
             }
 
-            //add the clicks to the output buffer
-            for (auto i = outputBuffer.getNumChannels(); --i >= 0;) {
-                outputBuffer.addSample(i, startSample, clickOutput);
-            }
-
+            //------------------- end resonator stuff -------------------
             //move impulse generator along
             phase += phaseDelta;
             ++startSample;
@@ -278,6 +291,7 @@ private:
     bool resonatorEnabled = false;
     double resonatorFreq = 0.0f;
     double resFreqDelta = 0.0f;
+
 
     //first layer impulse state
     double phase = 0.0;

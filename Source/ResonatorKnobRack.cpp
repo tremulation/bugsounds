@@ -70,10 +70,13 @@ ResonatorKnobRack::ResonatorKnobRack(BugsoundsAudioProcessor& processor, Bugsoun
     addAndMakeVisible(titleLabel);
 
     // --- Top row: Bandwidth, Gain, Mix ---
+    initializeKnob(resonatorOvertoneKnob, overtoneLabel, "Overtones", "Resonator Overtone Number", overtoneAttachment);
     initializeKnob(resonatorQKnob, qLabel, "Bandwidth", "Resonator Q", qAttachment);
-    initializeKnob(resonatorGainKnob, gainLabel, "Gain", "Resonator Gain", gainAttachment);
-    initializeKnob(resonatorOvertoneKnob, overtoneLabel, "Layers", "Resonator Overtone Number", overtoneAttachment);
+    initializeKnob(resonatorGainKnob, gainLabel, "Peak Gain", "Resonator Gain", gainAttachment);
+
     // --- Bottom row: Harmonic Emphasis, Overtones, Drive ---
+    initializeKnob(resonatorDecayKnob, oDecayLabel, "Overtone Decay", "Resonator Overtone Decay", oDecayAttachment);
+    initializeKnob(resonatorOriginalMixKnob, originalMixLabel, "Original Mix", "Resonator Original Mix", originalMixAttachment);
 
     powerButtonAttachment = std::make_unique<ButtonAttachment>(
         audioProcessor.apvts, "Resonator On", *powerButton);
@@ -124,31 +127,41 @@ void ResonatorKnobRack::resized()
     bounds.removeFromTop(5);
 
     // --- Divide remaining space into two rows for the knobs ---
-    int numColumns = 3;
-    int numRows = 1;
     int labelHeight = 20;
     const int upwardOffset = 10;
+    int totalKnobAreaHeight = bounds.getHeight();
+    auto topRowBounds = bounds.removeFromTop(totalKnobAreaHeight / 2);
+    auto bottomRowBounds = bounds; // The rest of the area
 
-    // Split the area into top and bottom rows
-    auto topRowBounds = bounds.removeFromTop(bounds.getHeight());
+    // --- Top Row Knobs (3 equally spaced knobs) ---
+    int topRowColumns = 3;
+    int topRowKnobWidth = topRowBounds.getWidth() / topRowColumns;
+    int topRowKnobSize = std::min(topRowKnobWidth, topRowBounds.getHeight()) - 20;
 
+    auto qKnobArea = topRowBounds.removeFromLeft(topRowKnobWidth);
+    resonatorQKnob.setBounds(qKnobArea.withSizeKeepingCentre(topRowKnobSize, topRowKnobSize).translated(0, -upwardOffset));
+    qLabel.setBounds(qKnobArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
 
-    // --- Top Row Knobs ---
-    // These are for Bandwidth, Gain, and Mix.
-    int knobWidth = topRowBounds.getWidth() / numColumns;
-    int knobSize = std::min(knobWidth, topRowBounds.getHeight()) - 20;
+    auto gainKnobArea = topRowBounds.removeFromLeft(topRowKnobWidth);
+    resonatorGainKnob.setBounds(gainKnobArea.withSizeKeepingCentre(topRowKnobSize, topRowKnobSize).translated(0, -upwardOffset));
+    gainLabel.setBounds(gainKnobArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
 
-    auto bandwidthArea = topRowBounds.removeFromLeft(knobWidth);
-    resonatorQKnob.setBounds(bandwidthArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, -upwardOffset));
-    qLabel.setBounds(bandwidthArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
+    auto overtoneKnobArea = topRowBounds;
+    resonatorOvertoneKnob.setBounds(overtoneKnobArea.withSizeKeepingCentre(topRowKnobSize, topRowKnobSize).translated(0, -upwardOffset));
+    overtoneLabel.setBounds(overtoneKnobArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
 
-    auto gainArea = topRowBounds.removeFromLeft(knobWidth);
-    resonatorGainKnob.setBounds(gainArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, -upwardOffset));
-    gainLabel.setBounds(gainArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
+    // --- Bottom Row Knobs (2 equally spaced knobs) ---
+    int bottomRowColumns = 2;
+    int bottomRowKnobWidth = bottomRowBounds.getWidth() / bottomRowColumns;
+    int bottomRowKnobSize = std::min(bottomRowKnobWidth, bottomRowBounds.getHeight()) - 20;
 
-    auto overtoneArea = topRowBounds.removeFromLeft(knobWidth);
-    resonatorOvertoneKnob.setBounds(overtoneArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, -upwardOffset));
-    overtoneLabel.setBounds(overtoneArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
+    auto decayKnobArea = bottomRowBounds.removeFromLeft(bottomRowKnobWidth);
+    resonatorDecayKnob.setBounds(decayKnobArea.withSizeKeepingCentre(bottomRowKnobSize, bottomRowKnobSize).translated(0, -upwardOffset));
+    oDecayLabel.setBounds(decayKnobArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
+
+    auto mixKnobArea = bottomRowBounds;
+    resonatorOriginalMixKnob.setBounds(mixKnobArea.withSizeKeepingCentre(bottomRowKnobSize, bottomRowKnobSize).translated(0, -upwardOffset));
+    originalMixLabel.setBounds(mixKnobArea.removeFromBottom(labelHeight).translated(0, -upwardOffset));
 }
 
 void ResonatorKnobRack::initializeKnob(juce::Slider& slider, juce::Label& label,

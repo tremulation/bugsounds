@@ -37,15 +37,17 @@ private:
 
     // --- Top row knobs ---
     // These will control Bandwidth, Gain, and overtoneNum
-    juce::Slider resonatorQKnob, resonatorGainKnob, resonatorOvertoneKnob;
-    juce::Label qLabel, gainLabel, mixLabel, overtoneLabel;
+    juce::Slider resonatorQKnob, resonatorGainKnob, resonatorOvertoneKnob, resonatorDecayKnob, resonatorOriginalMixKnob;
+    juce::Label qLabel, gainLabel, mixLabel, overtoneLabel, oDecayLabel, originalMixLabel;
 
     PowerButtonLookAndFeel powerButtonLAF;
     std::unique_ptr<juce::ToggleButton> powerButton;
 
+    std::unique_ptr<SliderAttachment> overtoneAttachment;
     std::unique_ptr<SliderAttachment> qAttachment;
     std::unique_ptr<SliderAttachment> gainAttachment;
-    std::unique_ptr<SliderAttachment> overtoneAttachment;
+    std::unique_ptr<SliderAttachment> oDecayAttachment;
+    std::unique_ptr<SliderAttachment> originalMixAttachment;
     std::unique_ptr<ButtonAttachment> powerButtonAttachment;
 
     juce::Label titleLabel;

@@ -206,22 +206,34 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
         "Resonator On",
         false));
 
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        "Resonator Overtone Number",
+        "Resonator Overtone Number",
+        1, 8, 0));
+
 	layout.add(std::make_unique<juce::AudioParameterFloat>(
 		"Resonator Q",
 		"Resonator Q",
 		juce::NormalisableRange<float>(0.0f, 200, 1.0f, 1.0f),
 		100.0f));
 
-	layout.add(std::make_unique<juce::AudioParameterInt>(
-		"Resonator Overtone Number",
-		"Resonator Overtone Number",
-		1, 8, 0));
-
 	layout.add(std::make_unique<juce::AudioParameterFloat>(
 		"Resonator Gain",
 		"Resonator Gain",
-		juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
-		0.50f));
+		juce::NormalisableRange<float>(0.0f, 50.0f, 0.01f, 1.0f),
+		25.0f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Resonator Overtone Decay",
+        "Resonator Overtone Decay",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
+        0.5f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Resonator Original Mix",
+        "Resonator Original Mix",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
+        1.0f));
 
     //click parameters
     layout.add(std::make_unique<juce::AudioParameterFloat>(

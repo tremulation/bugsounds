@@ -1,14 +1,15 @@
-Using a bank of resonators for the harmonic resonator has proven very difficult to get right. Instead, I've written a "harmonic spectral resonator" prototype that I plan on implementing in C++.
-
-- "Harmonic" means it has peaks along each overtone. 
-- "Spectral" means that it operates directly on the spectra of the sound, using a fourier transform to get the graph of the spectra, operating on it, and then using the inverse fourier transform to get back to the actual sound. 
-
 Use the code written here: https://github.com/slowslicingaudio/fourier4 as a reference for setting up the forward/inverse FFT, as well as the windows. 
+
+## Tha plan
 
 How to implement it in C++:
     1. Adapt the fourier transform windowing setup from this github: https://github.com/slowslicingaudio/fourier4 as a class I can pass blocks to and call process on. 
     2. Find a way to do the frequency shifts described by a song even though the fourier operation works on big windows of samples instead of going sample-by-sample like the current synthVoice resonator code.
     3. Convert the prototype code to a method called process in the resonator class, and create an array of delay objects that is the length of the window (one delay line per frequency bin)
+
+How to do the frequency change
+    1. use a small window size
+    2. cut the sample into windows in the 
 
 ## Spec
 
@@ -29,5 +30,15 @@ data:
     int hopSize (equals windowSize / overlapFactor)
 
     //state
-    int delays[windowSize]
+    vector<delayLine> delays (size = fft window size)
+    float windowbuf[windowSize]             //two circular buffers
+    float windowbufout[windowSize]          //
+    int playhead
+    int writehead
+
+    //objects
+    dsp::FFT fourierf, fourieri
+    dsp::WindowingFunction<float> window
+functionality:
+    process(float* bufferInput, float* bufferOutput, int playHead, int writeHead, float funamentalFreq)
     

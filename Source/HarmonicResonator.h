@@ -12,6 +12,7 @@
 
 #include <JuceHeader.h>
 #include <cmath>
+#include <vector>
 #include <algorithm>
 
 //not a helmholtz resonator anymore. 
@@ -19,70 +20,159 @@
 //based on the max patch in prototypes
 class HarmonicResonator {
 public:
-    HarmonicResonator() {
+
+    HarmonicResonator() : fourierf((int)std::log2(windowSize)), fourieri((int)std::log2(windowSize)),
+        windowFunction(windowSize, juce::dsp::WindowingFunction<float>::hann, false, 0.0f) {
+        reset();
+        
+    }
+	//==============================================================================================
+
+    //takes in the input samples from the synth, buffers it, and returns a sample from the processed buffer
+    float processSample(float sample, float freq) {
+        //retrieve one processed sample
+		float outputSample = bufout[writehead];
+        bufout[writehead] = 0.0f;
+
+        //push the input sample to the circular buffer
+        buf[playhead] = sample;
+
+        //increment pointers and hop counter
+        playhead++;
+		writehead++;
+		window++;
+
+        if (window == windowSize / 4) {
+            window = 0;
+            //do the processing. load the resulting processed block into bufout
+            processBlock(freq);
+        }
+        
+		if (playhead == windowSize) {
+			playhead = 0;
+		}
+		if (writehead == windowSize) {
+			writehead = 0;
+		}
+
+        return outputSample;
+    }
+
+
+    void processBlock(int funFreq) {
+        //temporary buffers for processing
+        float segmented[windowSize * 2];
+		float mag[windowSize], phase[windowSize];
+        std::fill(segmented, segmented + (windowSize * 2), 0.0f);
+        
+        //extract a window-sized segment from the circular buffer
+		//need 2 loops to handle the wrap-around
+        int counter = 0;
+		for (int i = playhead; i < windowSize; i++) {
+			segmented[counter] = buf[i];
+			counter++;
+		}
+        for (int i = 0; i < playhead; i++) {
+            segmented[counter] = buf[i];
+            counter++;
+        }
+
+		//apply windowing function
+        windowFunction.multiplyWithWindowingTable(segmented, windowSize);
+
+        //perform  forward FFT
+		fourierf.performRealOnlyForwardTransform(segmented);
+        for (int i = 0; i < windowSize; i++) {
+            std::complex<float> temp;
+			temp.real(segmented[i * 2]);
+			temp.imag(segmented[i * 2 + 1]);
+
+			mag[i] = std::abs(temp);
+			phase[i] = std::arg(temp);
+        }
+
+		//calculate the amplitude scaling for each frequency bin here. see prototype max patch for reference
+		//this is the part of the resonator that actually does the resonating
+        for (int i = 0; i < windowSize / 2; i++) {
+            float binFreq = (float)i * samplerate / windowSize;
+
+            float highestScalar = 1.0f;  //store the max peak gain per frequency bin
+
+            for (int harmonic = 1; harmonic <= n; harmonic++) {  //fundamental, followed by harmonics
+                float overtoneScaler = (harmonic == 1) ? 1.0f : std::pow(overtoneDecay, harmonic - 1);
+
+                float scaledOffset = (2 * (binFreq - funFreq * harmonic)) / q;
+                float thisPeakGain = originalScalar + (1.0f / (1.0f + (scaledOffset * scaledOffset))) * gain * overtoneScaler;
+
+                highestScalar = std::max(highestScalar, thisPeakGain);  //keep the highest gain
+            }
+
+            mag[i] *= highestScalar;
+        }
+
+        //revert back and perform inverse FFT
+        for (int i = 0; i < windowSize; i++) {
+            float real = std::cos(phase[i]) * mag[i];
+            float imag = std::sin(phase[i]) * mag[i];
+
+            segmented[i * 2] = real;
+            segmented[i * 2 + 1] = imag;
+        }
+
+        fourieri.performRealOnlyInverseTransform(segmented);
+
+        //apply windowing again (i think this is optional but idk)
+		windowFunction.multiplyWithWindowingTable(segmented, windowSize);
+
+        //add the output to the circular output buffer
+        for (int i = 0; i < windowSize; i++) {
+            if (i < (windowSize / 4) * 3) { //75% overlap. 
+				bufout[(writehead + i) % windowSize] += segmented[i] / (2.f / 3.f);
+            }
+            else {
+                bufout[(writehead + i) % windowSize] = segmented[i] / (2.f / 3.f);
+            }
+        }
+    }
+
+
+    //==============================================================================================
+
+    void prepareToPlay(int samplerate) {
+        this->samplerate = samplerate;
         reset();
     }
 
     void reset() {
-        for (int i = 0; i < 8; i++) {
-            delays[i][0] = 0.0f;
-            delays[i][1] = 0.0f;
-        }
-    }
+		writehead = 0;
+		playhead = 0;
+	}
 
-    void prepareToPlay(double sampleRate) {
-        this->sampleRate = sampleRate;
-        reset();
-    }
+	//================================================================================================
+
+    //filter parameters
+    //dont worry about these yet
+    int samplerate = 44100;
+    int n = 1;
+    int q = 50;
+    float gain = 1.0f;
+    float overtoneDecay = 0.5f;
+    float originalScalar = 1.0f;
 
 
-    float processSamples(float input, float freq) {
-        if (freq <= 0.0f || sampleRate <= 0.0f) return 0.0f;
 
-        float twopi = juce::MathConstants<float>::twoPi;
-        float totalOut = 0.0f;
-        float sumWeights = 0.0f;
-
-        for (int n = 1; n <= overtoneNum; ++n) {
-            float currentFreq = freq * n;
-            if (currentFreq >= sampleRate / 2) break;
-
-            float bandwidthRadians = (bandwidth / sampleRate) * twopi;
-            float peakRadius = 1.0f - (bandwidthRadians / 2.0f);
-            float freqRadians = (currentFreq / sampleRate) * twopi;
-            float peakLocation = std::acos((2.0f * peakRadius * std::cos(freqRadians)) / (1.0f + peakRadius * peakRadius));
-            float normFactor = (1.0f - peakRadius * peakRadius) * std::sin(peakLocation) * 1.4f;
-
-            float weight = 1.0f / n;
-            sumWeights += weight;
-
-            float& h1 = delays[n - 1][0];
-            float& h2 = delays[n - 1][1];
-
-            float out_n = (input * normFactor) + (2.0f * peakRadius * std::cos(peakLocation) * h2) - (h1 * peakRadius * peakRadius);
-
-            h1 = h2;
-            h2 = out_n;
-
-            totalOut += out_n * weight;
-        }
-
-        return totalOut * (gain / sumWeights); // Normalize output
-    }
-
-    //parameters. set them in rendernextblock
-    float bandwidth = 100.0f; //bandwidth: peak sharpness, in Hz. 0 to 500. 100 default.
-    int   overtoneNum = 3;      //number of overtone resonators to add. 1 to 8. default 1
-    float gain = 1.0f;   //output gain. 0 to 1, default 0.5
-    double sampleRate = 44100.0f;
+    //FFT parameters
+    static constexpr int windowSize = 512;
+    static constexpr int overlapFactor = 4;
+    int hopSize = windowSize / overlapFactor;
+	float bufout[windowSize], buf[windowSize];
+    int writehead = 0, playhead = 0, window = 0;
+    int hopCounter = 0;
 
 private:
-
-
-    //2d array for storing all the delay elements:
-    //1st element is the fundamental, with the rest being harmonics above the fundamental
-    //2*fundamental, 3*fundamental, 4*fundamental, etc.
-    float delays[8][2];
+    //objects
+    juce::dsp::FFT fourierf, fourieri;
+    juce::dsp::WindowingFunction<float> windowFunction;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(HarmonicResonator)
 };

@@ -82,7 +82,7 @@ void BugsoundsAudioProcessorEditor::resized()
 
     //right area for controls
     clickSettingsRack.setBounds(area.removeFromTop(rackHeight));
-    resonatorKnobRack.setBounds(area.removeFromTop(rackHeight)); //30 is title height
+    resonatorKnobRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2)); //30 is title height
 }
 
 
