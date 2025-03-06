@@ -209,7 +209,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
     layout.add(std::make_unique<juce::AudioParameterInt>(
         "Resonator Overtone Number",
         "Resonator Overtone Number",
-        1, 8, 0));
+        1, 16, 0));
 
 	layout.add(std::make_unique<juce::AudioParameterFloat>(
 		"Resonator Q",
@@ -243,23 +243,32 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
         0.0f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "Click Volume Random",
-        "Volume Randomness",
-        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
-        0.0f));
-
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Click Pitch Random",
         "Pitch Randomness",
         juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
         0.0f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "Click Rise Ratio",
-        "Click Rise Ratio",
+        "Click Atack Decay Ratio",
+        "Click Atack Decay Ratio",
         juce::NormalisableRange<float>(0.1f, 0.9f, 0.01f, 1.f),
         0.10f  // Default to 1/4 rise, 3/4 fall
     ));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Click Low Frequency Attenuation",
+        "Click Low Frequency Attenuation",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
+        0.0f));
+	layout.add(std::make_unique<juce::AudioParameterFloat>(
+		"Click Max Volume Frequency",
+		"Click Max Volume Frequency",
+		juce::NormalisableRange<float>(0.0f, 10000.0f, 1.f, 1.0f),
+		100.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Click Min Volume Frequency",
+        "Click Min Volume Frequency",
+        juce::NormalisableRange<float>(0.0f, 10000.0f, 1.f, 1.0f),
+        100.0f));
 
     return layout;
 }

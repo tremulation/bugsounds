@@ -27,6 +27,8 @@ private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
 
+    //void paintOverChildren(juce::Graphics& g) override;
+
     void initializeKnob(juce::Slider& slider, juce::Label& label,
         const juce::String& labelText,
         const juce::String& paramName,

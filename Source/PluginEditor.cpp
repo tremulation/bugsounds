@@ -48,7 +48,7 @@ void BugsoundsAudioProcessorEditor::resized()
     const int padding = 5;
     const int pipSequencerHeight = 200;
     const int buttonHeight = 30;
-    const int rackHeight = 120;
+    const int rackHeight = 110;
 
     //add consistent padding around all edges
     auto area = getLocalBounds().reduced(padding);
@@ -81,7 +81,7 @@ void BugsoundsAudioProcessorEditor::resized()
     testButton.setBounds(buttonArea.reduced(padding, 0));
 
     //right area for controls
-    clickSettingsRack.setBounds(area.removeFromTop(rackHeight));
+    clickSettingsRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2));
     resonatorKnobRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2)); //30 is title height
 }
 

@@ -65,6 +65,7 @@ public:
 				resCurIndex = 0;
                 resonatorEnabled = true;
                 resonator.reset();
+				resonator.setAPVTS(apvts);
 			}
         }
         else {
@@ -143,7 +144,9 @@ public:
             //      timingOffset -- a randomly generated offset that scales with the timing randomness parameter
             if (phase >= ((1.0 / patternPhaseDivisor) + timingOffset)) {
                 if (beatPattern[patternIndex] != 0) {
-                    startNewClick();
+                    //find the current frequency of click generation
+					float baseFrequency = phaseDelta * getSampleRate();
+                    startNewClick(baseFrequency);
                 }
                 
                 phase = 0.0;
@@ -177,13 +180,6 @@ public:
             //-------------------- resonator stuff ---------------------
 
             if (resonatorEnabled) {
-				// send all the resonator parameters from apvts to the resonator object
-				resonator.gain = *apvts->getRawParameterValue("Resonator Gain");
-				resonator.originalScalar = *apvts->getRawParameterValue("Resonator Original Mix");
-				resonator.q = *apvts->getRawParameterValue("Resonator Q");
-				resonator.n = *apvts->getRawParameterValue("Resonator Overtone Number");
-				resonator.overtoneDecay = *apvts->getRawParameterValue("Resonator Overtone Decay");
-
                 // Push raw click sample to resonator internal processing.
                 float processedSample = resonator.processSample(clickOutput, resonatorFreq);
                 for (int channel = 0; channel < outputBuffer.getNumChannels(); channel++) {
@@ -312,6 +308,7 @@ private:
         int pos; //position of the next pip in the sequence
         int samplesTilNextClick; //how long until the next pip starts
         int subClicksRemaining;
+        float vol;  //from 0 to 1. 
     };
  
     struct SubClick {
@@ -427,12 +424,28 @@ private:
 
 
     //TODO should I randomize things like pitch/level/length here, or in startNewSubClick
-    void startNewClick(){
+    void startNewClick(float clickGenerationFreq){
         Click newClick;
+
+        //handle frequency-based volume curve for the clicks (lower freqs are quieter)
+        //make these parameters later
+        float minFreqAttenuation = 0.0f;
+        float minVolumeFreq = 20.0f;
+        float maxVolumeFreq = 120.0f;
+
+        //calculate the volume of the click based on where it falls betwene the min and max volume freq
+        float volumeScale;
+        if (clickGenerationFreq <= minVolumeFreq) volumeScale = minFreqAttenuation;
+        else if (clickGenerationFreq >= maxVolumeFreq) volumeScale = 1.0f;
+        else {
+            float t = (clickGenerationFreq - minVolumeFreq) / (maxVolumeFreq - minVolumeFreq);
+            volumeScale = minFreqAttenuation + t * (1.0f - minFreqAttenuation);
+        }
+        newClick.vol = volumeScale;
 
         //create first subclick
         struct Pip firstPip = pipSequence[0];
-        startNewSubClick(firstPip.frequency, firstPip.length, firstPip.level);
+        startNewSubClick(firstPip.frequency, firstPip.length, firstPip.level * volumeScale);
 
         //now set up the click state
         newClick.pos = 1;   //already started first pip, go to second
@@ -487,7 +500,7 @@ private:
             if (click.samplesTilNextClick <= 0 && click.pos < pipSequence.size()) {
                 //start a new subclick with the next pip in the sequence
                 struct Pip nextPip = pipSequence[click.pos];
-                startNewSubClick(nextPip.frequency, nextPip.length, nextPip.level);
+                startNewSubClick(nextPip.frequency, nextPip.length, nextPip.level * click.vol);
 
                 //update the click state to the next pip
                 click.pos++; 

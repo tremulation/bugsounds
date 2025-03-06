@@ -96,7 +96,14 @@ public:
         for (int i = 0; i < windowSize / 2; i++) {
             float binFreq = (float)i * samplerate / windowSize;
 
-            float highestScalar = 1.0f;  //store the max peak gain per frequency bin
+            float highestScalar = 0.0f;  //store the max peak gain per frequency bin
+
+            //load parameters
+            float overtoneDecay = *apvts->getRawParameterValue("Resonator Overtone Decay");
+			float n = *apvts->getRawParameterValue("Resonator Overtone Number");
+            float q = *apvts->getRawParameterValue("Resonator Q");
+            float gain = *apvts->getRawParameterValue("Resonator Gain");
+			float originalScalar = *apvts->getRawParameterValue("Resonator Original Mix");
 
             for (int harmonic = 1; harmonic <= n; harmonic++) {  //fundamental, followed by harmonics
                 float overtoneScaler = (harmonic == 1) ? 1.0f : std::pow(overtoneDecay, harmonic - 1);
@@ -104,13 +111,17 @@ public:
                 float scaledOffset = (2 * (binFreq - funFreq * harmonic)) / q;
                 float thisPeakGain = originalScalar + (1.0f / (1.0f + (scaledOffset * scaledOffset))) * gain * overtoneScaler;
 
-                highestScalar = std::max(highestScalar, thisPeakGain);  //keep the highest gain
+                //highestScalar = std::max(highestScalar, thisPeakGain);  //keep the highest gain
+                highestScalar += thisPeakGain;
             }
 
             mag[i] *= highestScalar;
+            //scaling the phase too causes an extremely strange, atmospheric effect that I can't describe. 
+            //use this for the standalone resonator plugin
+            //phase[i] *= highestScalar;
         }
 
-        //revert back and perform inverse FFT
+        //perform inverse FFT to get the original signal
         for (int i = 0; i < windowSize; i++) {
             float real = std::cos(phase[i]) * mag[i];
             float imag = std::sin(phase[i]) * mag[i];
@@ -148,18 +159,14 @@ public:
 		playhead = 0;
 	}
 
+    void setAPVTS(juce::AudioProcessorValueTreeState* apvtsPtr) {
+        apvts = apvtsPtr;
+    }
+
 	//================================================================================================
 
     //filter parameters
-    //dont worry about these yet
     int samplerate = 44100;
-    int n = 1;
-    int q = 50;
-    float gain = 1.0f;
-    float overtoneDecay = 0.5f;
-    float originalScalar = 1.0f;
-
-
 
     //FFT parameters
     static constexpr int windowSize = 512;
@@ -171,6 +178,7 @@ public:
 
 private:
     //objects
+    juce::AudioProcessorValueTreeState* apvts = nullptr;
     juce::dsp::FFT fourierf, fourieri;
     juce::dsp::WindowingFunction<float> windowFunction;
 
