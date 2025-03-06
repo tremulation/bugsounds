@@ -258,17 +258,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
         "Click Low Frequency Attenuation",
         "Click Low Frequency Attenuation",
         juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
-        0.0f));
+        1.0f));
 	layout.add(std::make_unique<juce::AudioParameterFloat>(
 		"Click Max Volume Frequency",
 		"Click Max Volume Frequency",
-		juce::NormalisableRange<float>(0.0f, 10000.0f, 1.f, 1.0f),
+		juce::NormalisableRange<float>(0.0f, 1000.0f, 1.f, 1.0f),
 		100.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Click Min Volume Frequency",
         "Click Min Volume Frequency",
-        juce::NormalisableRange<float>(0.0f, 10000.0f, 1.f, 1.0f),
-        100.0f));
+        juce::NormalisableRange<float>(0.0f, 1000.0f, 1.f, 1.0f),
+        0.0f));
 
     return layout;
 }

@@ -423,25 +423,17 @@ private:
     }
 
 
-    //TODO should I randomize things like pitch/level/length here, or in startNewSubClick
     void startNewClick(float clickGenerationFreq){
         Click newClick;
 
         //handle frequency-based volume curve for the clicks (lower freqs are quieter)
-        //make these parameters later
-        float minFreqAttenuation = 0.0f;
-        float minVolumeFreq = 20.0f;
-        float maxVolumeFreq = 120.0f;
+        float minFreqAttenuation = *apvts->getRawParameterValue("Click Low Frequency Attenuation");
+        float minVolumeFreq = *apvts->getRawParameterValue("Click Min Volume Frequency");
+        float maxVolumeFreq = *apvts->getRawParameterValue("Click Max Volume Frequency");
 
         //calculate the volume of the click based on where it falls betwene the min and max volume freq
-        float volumeScale;
-        if (clickGenerationFreq <= minVolumeFreq) volumeScale = minFreqAttenuation;
-        else if (clickGenerationFreq >= maxVolumeFreq) volumeScale = 1.0f;
-        else {
-            float t = (clickGenerationFreq - minVolumeFreq) / (maxVolumeFreq - minVolumeFreq);
-            volumeScale = minFreqAttenuation + t * (1.0f - minFreqAttenuation);
-        }
-        newClick.vol = volumeScale;
+        float t = juce::jlimit(0.0f, 1.0f, (clickGenerationFreq - minVolumeFreq) / (maxVolumeFreq - minVolumeFreq));
+        float volumeScale = minFreqAttenuation + t * (1.0f - minFreqAttenuation);
 
         //create first subclick
         struct Pip firstPip = pipSequence[0];
@@ -468,13 +460,8 @@ private:
         float freqRandomnessAmount = *apvts->getRawParameterValue("Click Pitch Random");   //val from 0 to 1, representing how random it should be
         float freqRandomOffset = ((rng.nextFloat() * 2.0f) - 1.0f) * freqRandomnessAmount;
         float frequencyMultiplier = std::pow(2.0f, freqRandomOffset);
-
-        float baseLevel = vol;
-        float levelRandomnessAmount = *apvts->getRawParameterValue("Click Volume Random");  //0 to 1 again
-        float levelOffsetScalar = 1 - (rng.nextFloat() * levelRandomnessAmount);
-        float randomizedLevel = baseLevel * levelOffsetScalar;
         
-        float ratioParam = *apvts->getRawParameterValue("Click Rise Ratio");
+        float ratioParam = *apvts->getRawParameterValue("Click Atack Decay Ratio");
         int samplesUntilFall = std::round(ratioParam * static_cast<float>(samples));
 
         newClick.samplesRemaining = samples;
@@ -482,9 +469,9 @@ private:
         newClick.phase = 0.0f;
         newClick.frequency = baseFreq * frequencyMultiplier;
 
-        newClick.maxLevel = randomizedLevel;
+        newClick.maxLevel = vol;
         newClick.curLevel = 0.0f;
-        newClick.levelChangePerSample = randomizedLevel / static_cast<double>(samplesUntilFall);
+        newClick.levelChangePerSample = vol / static_cast<double>(samplesUntilFall);
 
         
         
