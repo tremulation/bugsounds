@@ -5,7 +5,6 @@
 
   ==============================================================================
 */
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "Evaluator.h"
@@ -13,9 +12,11 @@
 
 //==============================================================================
 BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProcessor& p)
-    : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p), frequencyEditor("Frequency Editor", false),
-    resonatorEditor("Resonator Editor", true), resonatorKnobRack(p, *this)
+    : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p), frequencyEditor("Frequency Editor", audioProcessor),
+	resonatorEditor("Resonator Editor", audioProcessor), resonatorKnobRack(p, *this), headerBar(p), pipSequencer(p)
 {
+    addAndMakeVisible(headerBar);
+
     addAndMakeVisible(frequencyEditor);
     addAndMakeVisible(resonatorEditor);
     testButton.setButtonText("Play song from code");
@@ -28,7 +29,7 @@ BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProce
 
     addAndMakeVisible(clickSettingsRack);
     addAndMakeVisible(resonatorKnobRack);
-    setSize(800, 600);
+    setSize(800, 640);
     
 }
 
@@ -49,9 +50,13 @@ void BugsoundsAudioProcessorEditor::resized()
     const int pipSequencerHeight = 200;
     const int buttonHeight = 30;
     const int rackHeight = 110;
+    const int headerHeight = 40;
+
+    //header bar takes up top section
+	headerBar.setBounds(getLocalBounds().removeFromTop(headerHeight));
 
     //add consistent padding around all edges
-    auto area = getLocalBounds().reduced(padding);
+    auto area = getLocalBounds().withTrimmedTop(headerHeight).reduced(padding);
 
     //split into left and right sections
     auto leftArea = area.removeFromLeft(area.getWidth() * (8.f / 12.f));

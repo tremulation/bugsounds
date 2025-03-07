@@ -12,6 +12,7 @@
 
 #include <JuceHeader.h>
 #include "Evaluator.h"
+#include "PluginProcessor.h"
 
 struct ErrorInfo;
 
@@ -20,7 +21,7 @@ class SongcodeEditor : public juce::Component,
                        public juce::TextEditor::Listener
 {
     public:
-        SongcodeEditor(const juce::String& title, bool startDisabled);
+        SongcodeEditor(const juce::String& title, BugsoundsAudioProcessor& audioProcessor);
         ~SongcodeEditor() override;
 
         void paint(juce::Graphics&) override;
@@ -58,6 +59,9 @@ class SongcodeEditor : public juce::Component,
         juce::Colour disabledBackgroundColour;
 
         bool isDisabled;
+
+        BugsoundsAudioProcessor& audioProcessor;
+        juce::String title;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SongcodeEditor)
 };

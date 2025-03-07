@@ -16,6 +16,7 @@
 #include "PipSequencer.h"
 #include "ResonatorKnobRack.h"
 #include "Evaluator.h"
+#include "HeaderBar.h"
 
 //==============================================================================
 /**
@@ -44,6 +45,7 @@ private:
     juce::TextButton testButton;
     ClickSettingsKnobRack clickSettingsRack; 
     ResonatorKnobRack resonatorKnobRack;
+    HeaderBar headerBar;
 
     void freqCodeEditorHasChanged();
     void resonatorCodeEditorHasChanged();

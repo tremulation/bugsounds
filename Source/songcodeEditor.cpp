@@ -13,7 +13,7 @@
 
 
 
-SongcodeEditor::SongcodeEditor(const juce::String& title, bool startDisabled)
+SongcodeEditor::SongcodeEditor(const juce::String& title, BugsoundsAudioProcessor& p) : audioProcessor(p)
 {
     //set up title 
     titleLabel.setFont(juce::Font(16.0f));
@@ -45,7 +45,17 @@ SongcodeEditor::SongcodeEditor(const juce::String& title, bool startDisabled)
     defaultBackgroundColour = getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId);
 
     //i have a feeling this will cause problems laters
-    isDisabled = startDisabled;
+    if (title == "Resonator Editor" && audioProcessor.getAPVTS().getParameter("Resonator On")->getValue() == false) {
+        //check if the resonator editor is disabled in the audio processor's apvts
+        disableEditor();
+    }
+    else {
+        enableEditor();
+    }
+
+    //get text stored in the processor
+    this->title = title;
+	setText(audioProcessor.getUserSongcode(title));
 }
 
 
@@ -140,7 +150,7 @@ void SongcodeEditor::setError(ErrorInfo* error) {
 
 
 void SongcodeEditor::textEditorTextChanged(juce::TextEditor&) {
-
+    audioProcessor.setUserSongcode(mainEditor.getText(), title);
     if (isDisabled) return;
 
     if (hasActiveError) {

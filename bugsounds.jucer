@@ -4,6 +4,11 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="RIYwew" name="bugsounds">
     <GROUP id="{28D391B9-8AA7-A9B0-B4E4-937980DDCF90}" name="Source">
+      <FILE id="IrltQS" name="PresetManager.cpp" compile="1" resource="0"
+            file="Source/PresetManager.cpp"/>
+      <FILE id="Xz4FnF" name="PresetManager.h" compile="0" resource="0" file="Source/PresetManager.h"/>
+      <FILE id="KGj3pZ" name="presetPanel.h" compile="0" resource="0" file="Source/presetPanel.h"/>
+      <FILE id="IscZQz" name="HeaderBar.h" compile="0" resource="0" file="Source/HeaderBar.h"/>
       <FILE id="tNiF4t" name="ResonatorKnobRack.cpp" compile="1" resource="0"
             file="Source/ResonatorKnobRack.cpp"/>
       <FILE id="uJWTyB" name="Evaluator.h" compile="0" resource="0" file="Source/Evaluator.h"/>

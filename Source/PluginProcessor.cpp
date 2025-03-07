@@ -19,7 +19,7 @@ BugsoundsAudioProcessor::BugsoundsAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+	 ), presetManager(apvts)
 #endif
 {
     mySynth.clearVoices();
@@ -271,6 +271,25 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
         0.0f));
 
     return layout;
+}
+
+const juce::String& BugsoundsAudioProcessor::getUserSongcode(const juce::String& editorTitle){
+	if (editorTitle == "Frequency Editor") {
+        return freqSong;
+	}
+	else if (editorTitle == "Resonator Editor") {
+		return resSong;
+	}
+}
+
+void BugsoundsAudioProcessor::setUserSongcode(const juce::String& songcode, const juce::String& editorTitle){
+    juce::Logger::writeToLog("HERE");
+    if (editorTitle == "Frequency Editor") {
+		freqSong = songcode;
+	}
+	else if (editorTitle == "Resonator Editor") {
+		resSong = songcode;
+	}
 }
 
 

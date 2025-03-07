@@ -8,6 +8,7 @@
 #pragma once
 #include <JuceHeader.h>
 #include "PipStructs.h"
+#include "PluginProcessor.h"
 
 
 class PipBar;
@@ -158,7 +159,7 @@ private:
 class PipSequencer : public juce::Component
 {
 public:
-    PipSequencer();
+    PipSequencer(BugsoundsAudioProcessor& p);
     ~PipSequencer() override;
 
     void paint(juce::Graphics&) override;
@@ -168,9 +169,14 @@ public:
     void createInlineEditor(PipBar::PipBarArea* pba, juce::Point<int> position);
     void updatePipBarModes(EditingMode newMode);
 
+    void updateProcessor() {
+        auto pips = getPips();
+        audioProcessor.setPips(pips);
+    }
+
     enum EditingMode mode = EditingMode::FREQUENCY;
 private:
-
+    void loadPipsFromProcessor();
     juce::Label titleLabel;
     std::unique_ptr<SequenceBox> sequenceBox; //container for pip bars
     std::unique_ptr<juce::TextEditor> inlineEditor; //this is the little text box that appears when you double click
@@ -181,7 +187,10 @@ private:
     void createModeButtons();
     void clearModeButtonStates();
 
+    BugsoundsAudioProcessor& audioProcessor;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PipSequencer)
+public:
 };
 
 
@@ -201,6 +210,10 @@ public:
     void setSelectedPipBar(PipBar* pipBar);
     bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
     std::vector<std::unique_ptr<PipBar>> pipBars;
+
+	void addPips(std::vector<Pip> pips);
+
+    void updatePipPositions();
 private:
     PipSequencer& parent;
 
@@ -210,7 +223,7 @@ private:
     juce::TextButton addButton;
     void onAddButtonClicked();
 
-    void updatePipPositions();
+    
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SequenceBox)
 };

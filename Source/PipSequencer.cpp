@@ -11,7 +11,7 @@
 
 //----------------------------========== Pip Sequencer ==========----------------------------\\
 
-PipSequencer::PipSequencer() {
+PipSequencer::PipSequencer(BugsoundsAudioProcessor& p) : audioProcessor(p){
     //set up title 
     titleLabel.setFont(juce::Font(16.0f));
     titleLabel.setJustificationType(juce::Justification::left);
@@ -28,6 +28,8 @@ PipSequencer::PipSequencer() {
 
     //setup editing mode buttons
     createModeButtons();
+
+	loadPipsFromProcessor();
 }
 
 
@@ -110,7 +112,7 @@ std::vector<Pip> PipSequencer::getPips() {
             pips.push_back(Pip(bar->ourPip));
         }
     }
-    logPips(pips);
+    //logPips(pips);
     return pips;
 }
 
@@ -246,12 +248,32 @@ void PipSequencer::createModeButtons() {
             mode = static_cast<EditingMode>(i);
             modeButtons[i]->setToggleState(true, juce::dontSendNotification);
             updatePipBarModes(mode);    //propogate mode change to pipBars
+            audioProcessor.updatePipBarModes(mode);
         };
     }
 
     //setup initial state
     modeButtons[0]->setToggleState(true, juce::dontSendNotification);
 }
+
+
+void PipSequencer::loadPipsFromProcessor() {
+    std::vector<Pip> storedPips;
+    EditingMode storedMode;
+    audioProcessor.getPips(storedPips, storedMode);
+
+    //setup remembered mode  
+    clearModeButtonStates();
+    mode = storedMode;
+    modeButtons[mode]->setToggleState(true, juce::dontSendNotification);
+
+    updatePipBarModes(mode);
+
+    //setup remembered pips  
+    sequenceBox->pipBars.clear();
+    sequenceBox->addPips(storedPips);
+}
+
 
 
 void PipSequencer::clearModeButtonStates() {
@@ -345,6 +367,19 @@ int SequenceBox::getMinimumWidth() const {
 
 
 
+void SequenceBox::addPips(std::vector<Pip> pips) {
+	for (const auto& pip : pips) {
+		auto newPip = std::make_unique<PipBar>();
+		newPip->mode = parent.mode;
+		newPip->ourPip = pip;
+		addAndMakeVisible(newPip.get());
+		pipBars.push_back(std::move(newPip));
+	}
+
+	setSize(getMinimumWidth(), getHeight());
+	updatePipPositions();
+}
+
 //draws each pip with the proper start coord
 //also handles padding to the left of the add button when there are no pips yet
 void SequenceBox::updatePipPositions() {
@@ -394,6 +429,8 @@ void SequenceBox::onAddButtonClicked() {
     if (auto* viewport = findParentComponentOfClass<juce::Viewport>()) {
         viewport->setViewPosition(getMinimumWidth() - viewport->getWidth(), 0);
     }
+
+    parent.updateProcessor();
 }
 
 
@@ -424,6 +461,8 @@ void SequenceBox::deleteSelectedPipBar()
             selectedPipBar = nullptr;
             resized();
             repaint();
+
+            parent.updateProcessor();
         }
     }
 }
@@ -668,6 +707,11 @@ void PipBar::PipBarArea::mouseDrag(const juce::MouseEvent& e) {
 
     repaint();
     parentBar.repaint();
+    if (auto* sequenceBox = findParentComponentOfClass<SequenceBox>()) {
+        if (auto* pipSequencer = sequenceBox->findParentComponentOfClass<PipSequencer>()) {
+            pipSequencer->updateProcessor();
+        }
+    }
 }
 
 
@@ -707,33 +751,35 @@ void PipBar::PipBarArea::applyInlineEditorValue(juce::String rawInput) {
             parentBar.ourPip.frequency = juce::jlimit(PipConstants::MIN_FREQUENCY, 
                                                       PipConstants::MAX_FREQUENCY, 
                                                       newValue);
-            repaint();
-            parentBar.repaint();
-            return;
+            
         case LENGTH:
             parentBar.ourPip.length = juce::jlimit(PipConstants::MIN_LENGTH,
                                                    PipConstants::MAX_LENGTH,
                                                    juce::roundToInt(newValue));
-            repaint();
-            parentBar.repaint();
-            return;
+            goto update;
         case OVERLAP:
             parentBar.ourPip.tail = juce::jlimit(PipConstants::MIN_TAIL,
                                                  PipConstants::MAX_TAIL,
                                                  juce::roundToInt(newValue));
-            repaint();
-            parentBar.repaint();
-            return;
+            goto update;
         case LEVEL:
             parentBar.ourPip.level = juce::jlimit(PipConstants::MIN_LEVEL,
                                                   PipConstants::MAX_LEVEL,
                                                   newValue);
-            repaint();
-            parentBar.repaint();
-            return;
+            goto update;
         default:
             return;
     }
+
+update:
+    repaint();
+    parentBar.repaint();
+    if (auto* sequenceBox = parentBar.findParentComponentOfClass<SequenceBox>()) {
+        if (auto* pipSequencer = sequenceBox->findParentComponentOfClass<PipSequencer>()) {
+            pipSequencer->updateProcessor();
+        }
+    }
+    return;
 }
 
 

@@ -22,7 +22,7 @@ public:
         //set up the rack's title
         titleLabel.setFont(juce::Font(16.0f));
         titleLabel.setJustificationType(juce::Justification::left);
-        titleLabel.setText("Click randomness settings", juce::dontSendNotification);
+        titleLabel.setText("Click settings", juce::dontSendNotification);
         addAndMakeVisible(titleLabel);
 
         //set up the knobs
