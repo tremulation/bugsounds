@@ -29,7 +29,12 @@ PipSequencer::PipSequencer(BugsoundsAudioProcessor& p) : audioProcessor(p){
     //setup editing mode buttons
     createModeButtons();
 
-	loadPipsFromProcessor();
+    //setup preview button
+    previewButton.setButtonText("Preview");
+    previewButton.onClick = [this] { audioProcessor.triggerPreviewClick(); };
+    addAndMakeVisible(previewButton);
+
+    loadPipsFromProcessor();
     audioProcessor.getPresetManager().addChangeListener(this);
 }
 
@@ -70,6 +75,13 @@ void PipSequencer::resized() {
     auto titleHeight = 30;
     auto titleBounds = bounds.removeFromTop(titleHeight);
     titleLabel.setBounds(titleBounds.reduced(5, 0));
+
+    //position preview button to the right of the title
+    auto previewButtonWidth = 80;
+    auto previewButtonHeight = titleHeight - 10;
+    auto previewButtonBounds = titleBounds.removeFromRight(previewButtonWidth).reduced(5, 5);
+    previewButton.setBounds(previewButtonBounds);
+
 
     //position mode buttons with spacing
     auto buttonRow = bounds.removeFromTop(buttonRowHeight);

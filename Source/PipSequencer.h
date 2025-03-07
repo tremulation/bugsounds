@@ -183,6 +183,8 @@ private:
     std::unique_ptr<juce::TextEditor> inlineEditor; //this is the little text box that appears when you double click
     std::unique_ptr<juce::Viewport> viewport;   //horizontal scrolling on pips when they overflow
     TabStyleLookAndFeel modeButtonLookAndFeel;    //style for buttons
+    
+    juce::TextButton previewButton;
 
     std::array<std::unique_ptr<juce::TextButton>, 4> modeButtons;
     void createModeButtons();

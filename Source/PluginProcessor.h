@@ -16,6 +16,7 @@
 #include "Evaluator.h"
 #include "PresetManager.h"
 #include "PipStructs.h"
+#include "ClickPreviewer.h"
 
 
 
@@ -94,7 +95,11 @@ public:
 	const juce::String& getUserSongcode(const juce::String& editorTitle);
 	void setUserSongcode(const juce::String& songcode, const juce::String& editorTitle); 
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
-    void setPips(std::vector<Pip> pips) { this->pips = pips; myVoice->setPipSequence(pips); }
+    void setPips(std::vector<Pip> pips) { 
+        this->pips = pips; 
+        myVoice->setPipSequence(pips);
+        clickPreviewer->setPips(pips);
+    }
     void updatePipBarModes(EditingMode newMode) { pipMode = newMode; }
     void getPips(std::vector<Pip>& pips, EditingMode& mode) { pips = this->pips;  mode = pipMode;  }
     
@@ -108,7 +113,7 @@ public:
     const juce::String& getFreqSong() const { return freqSong; }
     const juce::String& getResSong() const { return resSong; }
     
-
+    void triggerPreviewClick();
 	
 private:
     juce::String freqSong = "";
@@ -120,6 +125,7 @@ private:
     SynthVoice* myVoice;
     double lastSampleRate;
     std::unique_ptr<PresetManager> presetManager;
+    std::unique_ptr<ClickPreviewer> clickPreviewer;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BugsoundsAudioProcessor)

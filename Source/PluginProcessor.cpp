@@ -23,7 +23,7 @@ BugsoundsAudioProcessor::BugsoundsAudioProcessor()
 #endif
 {
     presetManager = std::make_unique<PresetManager>(apvts, freqSong, resSong, pips, *this);
-
+    clickPreviewer = std::make_unique<ClickPreviewer>(apvts);
     mySynth.clearVoices();
     myVoice = new SynthVoice();
     mySynth.addVoice(myVoice);
@@ -107,6 +107,10 @@ void BugsoundsAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     lastSampleRate = sampleRate;
     mySynth.setCurrentPlaybackSampleRate(lastSampleRate);
     myVoice->prepareToPlay(sampleRate, samplesPerBlock);
+
+    if (clickPreviewer != nullptr) {
+        clickPreviewer->prepareToPlay(samplesPerBlock, sampleRate);
+    }
 }
 
 void BugsoundsAudioProcessor::releaseResources()
@@ -148,30 +152,23 @@ void BugsoundsAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
+    //clear extra output channels
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
-    }
-
-    buffer.clear();
+    //render main synth player output
     mySynth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+
+    //render previewer output into a temporary buffer
+    juce::AudioBuffer<float> previewBuffer(buffer.getNumChannels(), buffer.getNumSamples());
+    previewBuffer.clear();
+    juce::AudioSourceChannelInfo previewInfo(&previewBuffer, 0, buffer.getNumSamples());
+    if (clickPreviewer != nullptr) clickPreviewer->getNextAudioBlock(previewInfo);
+
+    //mix previewer output into main buffer
+    for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
+        buffer.addFrom(channel, 0, previewBuffer, channel, 0, buffer.getNumSamples());
+    }
 }
 
 //==============================================================================
@@ -302,6 +299,12 @@ void BugsoundsAudioProcessor::setUserSongcode(const juce::String& songcode, cons
 	else if (editorTitle == "Resonator Editor") {
 		resSong = songcode;
 	}
+}
+
+void BugsoundsAudioProcessor::triggerPreviewClick(){
+    if (clickPreviewer != nullptr) {
+        clickPreviewer->triggerPreviewClick();
+    }
 }
 
 
