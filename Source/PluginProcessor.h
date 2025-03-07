@@ -17,6 +17,8 @@
 #include "PresetManager.h"
 #include "PipStructs.h"
 
+
+
 //==============================================================================
 /**
 */
@@ -79,17 +81,33 @@ public:
         myVoice->setPipSequence(pips);
     }
 
+    //getter method for pips
+    const std::vector<Pip>& getPips() const {
+        return pips;
+    }
+
 	PresetManager& getPresetManager() {
-		return presetManager;
+		return *presetManager;
 	}
 
     //persistence functions
 	const juce::String& getUserSongcode(const juce::String& editorTitle);
-	void setUserSongcode(const juce::String& songcode, const juce::String& editorTitle);    
+	void setUserSongcode(const juce::String& songcode, const juce::String& editorTitle); 
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
-    void setPips(std::vector<Pip> pips) { this->pips = pips; }
+    void setPips(std::vector<Pip> pips) { this->pips = pips; myVoice->setPipSequence(pips); }
     void updatePipBarModes(EditingMode newMode) { pipMode = newMode; }
     void getPips(std::vector<Pip>& pips, EditingMode& mode) { pips = this->pips;  mode = pipMode;  }
+    
+    void propogatePresetLoad(juce::String fs, juce::String rs, std::vector<Pip> pipi) {
+        freqSong = fs;
+        resSong = rs;
+        setPips(pipi);
+    }
+
+    //getter methods for freqSong, and resSong
+    const juce::String& getFreqSong() const { return freqSong; }
+    const juce::String& getResSong() const { return resSong; }
+    
 
 	
 private:
@@ -101,7 +119,7 @@ private:
     juce::Synthesiser mySynth;
     SynthVoice* myVoice;
     double lastSampleRate;
-	PresetManager presetManager;
+    std::unique_ptr<PresetManager> presetManager;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BugsoundsAudioProcessor)

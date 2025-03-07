@@ -18,7 +18,8 @@ struct ErrorInfo;
 
 
 class SongcodeEditor : public juce::Component,
-                       public juce::TextEditor::Listener
+                       public juce::TextEditor::Listener,
+                       public juce::ChangeListener
 {
     public:
         SongcodeEditor(const juce::String& title, BugsoundsAudioProcessor& audioProcessor);
@@ -34,6 +35,7 @@ class SongcodeEditor : public juce::Component,
         //if error is null, then successfully compiled.
         void SongcodeEditor::setError(ErrorInfo* error = nullptr);
         void clearErrorHighlight();
+        void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
         void disableEditor();
         void enableEditor();

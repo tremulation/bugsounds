@@ -56,11 +56,14 @@ SongcodeEditor::SongcodeEditor(const juce::String& title, BugsoundsAudioProcesso
     //get text stored in the processor
     this->title = title;
 	setText(audioProcessor.getUserSongcode(title));
+
+    //set up a listener
+    audioProcessor.getPresetManager().addChangeListener(this);
 }
 
 
-SongcodeEditor::~SongcodeEditor()
-{
+SongcodeEditor::~SongcodeEditor(){
+    audioProcessor.getPresetManager().removeChangeListener(this);
 }
 
 
@@ -126,6 +129,18 @@ void SongcodeEditor::clearErrorHighlight() {
     hasActiveError = false;
     
     mainEditor.setTemporaryUnderlining(currentErrorRange);
+}
+
+
+void SongcodeEditor::changeListenerCallback(juce::ChangeBroadcaster* source){
+    if (source == &audioProcessor.getPresetManager()) {
+        if (title == "Frequency Editor") {
+            setText(audioProcessor.getFreqSong());
+        }
+        else {
+            setText(audioProcessor.getResSong());
+        }
+    }
 }
 
 

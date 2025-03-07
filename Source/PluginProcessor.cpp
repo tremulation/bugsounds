@@ -19,9 +19,11 @@ BugsoundsAudioProcessor::BugsoundsAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-	 ), presetManager(apvts)
+	 ) 
 #endif
 {
+    presetManager = std::make_unique<PresetManager>(apvts, freqSong, resSong, pips, *this);
+
     mySynth.clearVoices();
     myVoice = new SynthVoice();
     mySynth.addVoice(myVoice);

@@ -156,7 +156,7 @@ private:
 
 //MAIN CLASS
 //the main UI component that contains all the different elements of the pip sequencer
-class PipSequencer : public juce::Component
+class PipSequencer : public juce::Component, public juce::ChangeListener
 {
 public:
     PipSequencer(BugsoundsAudioProcessor& p);
@@ -168,6 +168,7 @@ public:
     void logPips(const std::vector<Pip> pips);
     void createInlineEditor(PipBar::PipBarArea* pba, juce::Point<int> position);
     void updatePipBarModes(EditingMode newMode);
+    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
     void updateProcessor() {
         auto pips = getPips();

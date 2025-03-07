@@ -30,10 +30,13 @@ PipSequencer::PipSequencer(BugsoundsAudioProcessor& p) : audioProcessor(p){
     createModeButtons();
 
 	loadPipsFromProcessor();
+    audioProcessor.getPresetManager().addChangeListener(this);
 }
 
 
-PipSequencer::~PipSequencer() = default;
+PipSequencer::~PipSequencer() {
+    audioProcessor.getPresetManager().removeChangeListener(this);
+}
 
 
 void PipSequencer::paint(juce::Graphics& g) {
@@ -112,7 +115,7 @@ std::vector<Pip> PipSequencer::getPips() {
             pips.push_back(Pip(bar->ourPip));
         }
     }
-    //logPips(pips);
+    logPips(pips);
     return pips;
 }
 
@@ -292,6 +295,12 @@ void PipSequencer::updatePipBarModes(EditingMode newMode) {
                 pipBar->changeMode(newMode);
             }
         }
+    }
+}
+
+void PipSequencer::changeListenerCallback(juce::ChangeBroadcaster* source){
+    if (source == &audioProcessor.getPresetManager()) {
+        loadPipsFromProcessor();
     }
 }
 

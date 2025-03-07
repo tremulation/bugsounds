@@ -82,7 +82,25 @@ public:
         curElementIndex = 0;
         setupNextNote(song[0]);
         playing = true;
+
+        //pips
+        logPipSequence();
+
     }
+
+
+    void logPipSequence() {
+        juce::String output;
+        for (size_t i = 0; i < pipSequence.size(); ++i) {
+            const auto& pip = pipSequence[i];
+            output += "Pip " + juce::String(i) + ": ";
+            output += "Frequency: " + juce::String(pip.frequency) + " Hz, ";
+            output += "Length: " + juce::String(pip.length) + " samples, ";
+            output += "Level: " + juce::String(pip.level) + "\n";
+        }
+        juce::Logger::writeToLog(output);
+    }
+
 
 
     void logCompiledSong(std::vector<SongElement> compiledSong)
@@ -445,6 +463,7 @@ private:
         if (newClick.samplesTilNextClick <= 0) {
             newClick.samplesTilNextClick = 1;
         }
+        newClick.vol = volumeScale;
 
         activeClicks.push_back(newClick);
     }
