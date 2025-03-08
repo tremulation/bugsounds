@@ -29,32 +29,37 @@ public:
         currentPipIndex = 0;
         samplesUntilNextSubClick = 0;
         previewActive = false;
+        juce::Logger::writeToLog("in prepare to play");
     }
 
     void releaseResources() override {
         activeSubClicks.clear();
     }
 
+
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override {
         auto* buffer = bufferToFill.buffer;
         auto numSamples = bufferToFill.numSamples;
 
-        //clear output buffer
+        // Clear output buffer.
         for (int channel = 0; channel < buffer->getNumChannels(); ++channel)
             buffer->clear(channel, bufferToFill.startSample, numSamples);
 
-        //process sample by sample
+        // Process sample by sample.
         for (int sample = 0; sample < numSamples; sample++) {
-            //handle creating new clicks
+            // Global scheduling of new subclicks.
             if (previewActive) {
-                if (samplesUntilNextSubClick <= 0 && currentPipIndex < static_cast<int>(pips.size())) {
+                if (samplesUntilNextSubClick <= 0 && currentPipIndex < pips.size()) {
                     const Pip& pip = pips[currentPipIndex];
                     spawnSubClick(pip);
-                    int delay = pip.length - pip.tail;
+                    int delay = pip.length - pip.tail;  // Ensure pip.length & pip.tail are in samples.
                     samplesUntilNextSubClick = (delay > 0) ? delay : 1;
                     currentPipIndex++;
 
-                    //all pips are done being added, end the preview scheduling
+                    //this is never called. why?
+                    juce::Logger::writeToLog("created a new pip");
+
+                    // End preview scheduling when all pips have been spawned.
                     if (currentPipIndex >= static_cast<int>(pips.size())) {
                         previewActive = false;
                     }
@@ -64,12 +69,44 @@ public:
                 }
             }
 
-            //render the clicks
+            // Render active subclicks.
             float output = renderActiveSubClicks();
             for (int channel = 0; channel < buffer->getNumChannels(); channel++) {
                 buffer->addSample(channel, bufferToFill.startSample + sample, output);
             }
         }
+    }
+
+
+    float renderActiveSubClicks() {
+        double output = 0.0;
+        for (auto& click : activeSubClicks) {
+            // Render the click audio only.
+            float oscVal = std::sin(click.phase * 2.0 * juce::MathConstants<double>::pi);
+            click.phase += click.frequency / currentSampleRate;
+            if (click.phase >= 1.0)
+                click.phase -= 1.0;
+
+            if (click.curLevel >= click.maxLevel) {
+                click.levelChangePerSample = -(click.curLevel / static_cast<double>(click.samplesRemaining));
+            }
+            click.curLevel += click.levelChangePerSample;
+            output += oscVal * click.curLevel;
+            click.samplesRemaining--;
+        }
+
+        // Remove finished subclicks.
+        activeSubClicks.erase(
+            std::remove_if(activeSubClicks.begin(), activeSubClicks.end(),
+                [](const auto& click) { 
+                    //it only prints finishing pip once, meaning only one pip is ever played
+                    if(click.samplesRemaining <= 0) juce::Logger::writeToLog("Finishing pip");
+                    return click.samplesRemaining <= 0; 
+                }),
+            activeSubClicks.end()
+        );
+
+        return static_cast<float>(output);
     }
 
     //call to trigger a new click
@@ -83,8 +120,15 @@ public:
         samplesUntilNextSubClick = (delay > 0) ? delay : 1;
         currentPipIndex = 1;
         // If there's only one pip, the preview will immediately end.
-        if (pips.size() == 1)
+        //this logger correctly reports the number of pips
+        /*juce::Logger::writeToLog("There are " + juce::String(pips.size()) + " pips");*/
+        previewActive = pips.size() == 1;
+        if (pips.size() == 1) {
             previewActive = false;
+        } else {
+            previewActive = true;
+        }
+            
     }
 
     void setPips(std::vector<Pip> newPips) {
@@ -98,7 +142,7 @@ private:
     //identical to struct in synthVoice.h
     struct SubClick
     {
-        int samplesRemaining;          
+        int samplesRemaining;     
         double frequency;              
         double phase;                  
         double maxLevel;               
@@ -107,8 +151,7 @@ private:
     };
 
 
-    void spawnSubClick(const Pip& pip)
-    {
+    void spawnSubClick(const Pip& pip) {
         SubClick newSubClick;
         float baseFreq = pip.frequency;
         float freqRandomnessAmount = *apvts.getRawParameterValue("Click Pitch Random"); // value from 0 to 1
@@ -126,32 +169,6 @@ private:
         newSubClick.levelChangePerSample = pip.level / static_cast<double>(samplesUntilFall);
 
         activeSubClicks.push_back(newSubClick);
-    }
-
-
-    float renderActiveSubClicks()
-    {
-        double output = 0.0;
-        for (auto it = activeSubClicks.begin(); it != activeSubClicks.end(); )
-        {
-            float oscVal = std::sin(it->phase * 2.0 * juce::MathConstants<double>::pi);
-            it->phase += it->frequency / currentSampleRate;
-            if (it->phase >= 1.0)
-                it->phase -= 1.0;
-
-            if (it->curLevel >= it->maxLevel)
-                it->levelChangePerSample = -(it->curLevel / static_cast<double>(it->samplesRemaining));
-            it->curLevel += it->levelChangePerSample;
-
-            output += oscVal * it->curLevel;
-            it->samplesRemaining--;
-
-            if (it->samplesRemaining <= 0)
-                it = activeSubClicks.erase(it);
-            else
-                ++it;
-        }
-        return static_cast<float>(output);
     }
 
 
