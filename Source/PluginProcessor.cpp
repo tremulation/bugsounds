@@ -30,6 +30,8 @@ BugsoundsAudioProcessor::BugsoundsAudioProcessor()
     myVoice->setAPVTS(&apvts);
     mySynth.clearSounds();
     mySynth.addSound(new SynthSound());
+
+    if (presetManager != nullptr) presetManager->loadPreset("Default");
 }
 
 BugsoundsAudioProcessor::~BugsoundsAudioProcessor()

@@ -11,6 +11,38 @@
 #include "PresetManager.h"
 #include "PluginProcessor.h"
 
+//hardcoded default preset
+const juce::String PresetManager::defaultPresetXml = R"(
+<?xml version="1.0" encoding="UTF-8"?>
+<Preset version="1.0">
+  <Parameters>
+    <PARAM id="Click Atack Decay Ratio" value="0.2100000083446503"/>
+    <PARAM id="Click Low Frequency Attenuation" value="0.2199999988079071"/>
+    <PARAM id="Click Max Volume Frequency" value="100.0"/>
+    <PARAM id="Click Min Volume Frequency" value="0.0"/>
+    <PARAM id="Click Pitch Random" value="0.0"/>
+    <PARAM id="Click Timing Random" value="0.1400000005960464"/>
+    <PARAM id="Resonator Gain" value="5.799999713897705"/>
+    <PARAM id="Resonator On" value="0.0"/>
+    <PARAM id="Resonator Original Mix" value="0.0"/>
+    <PARAM id="Resonator Overtone Decay" value="0.5"/>
+    <PARAM id="Resonator Overtone Number" value="10.0"/>
+    <PARAM id="Resonator Q" value="37.0"/>
+  </Parameters>
+  <CUSTOM_DATA>
+    <FREQ_SONG value="120 1000, 0 1000"/>
+    <RES_SONG value="440 1000, 880 1000"/>
+    <PIPS>
+      <PIP freq="1153.18603515625" len="500" tail="43" level="0.1521739363670349"/>
+      <PIP freq="1069.771362304688" len="670" tail="29" level="0.4239130616188049"/>
+      <PIP freq="2839.251708984375" len="759" tail="0" level="0.02173912525177002"/>
+      <PIP freq="920.605224609375" len="100" tail="0" level="0.5"/>
+    </PIPS>
+  </CUSTOM_DATA>
+</Preset>
+)";
+
+
 const juce::File PresetManager::defaultDir{
 	juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
 	.getChildFile(ProjectInfo::companyName)
@@ -19,18 +51,20 @@ const juce::File PresetManager::defaultDir{
 
 const juce::String PresetManager::extension{ "preset" };
 
+
+
 PresetManager::PresetManager(juce::AudioProcessorValueTreeState& valueTreeState, juce::String& freqSongRef,
 	juce::String& resSongRef,std::vector<Pip>& pipsRef, BugsoundsAudioProcessor& p)
 	: apvts(valueTreeState), freqSong(freqSongRef), resSong(resSongRef), pips(pipsRef), audioProcessor(p)
 {
 	currentPreset = "Default";
-
 	//create a default director for presets if it doesn't exist yet
 	if (!defaultDir.exists()) {
 		const auto result = defaultDir.createDirectory();
 		DBG("Preset directory created: " + defaultDir.getFullPathName());
 	}
 }
+
 
 void PresetManager::savePreset(const juce::String& presetName) {
 	if (presetName.isEmpty()) return;
@@ -55,6 +89,9 @@ void PresetManager::savePreset(const juce::String& presetName) {
 	currentPreset = presetName;
 }
 
+
+
+
 void PresetManager::exportXml(juce::XmlElement& parentElement) {
 	auto* customData = new juce::XmlElement("CUSTOM_DATA");
 	parentElement.addChildElement(customData);
@@ -75,6 +112,8 @@ void PresetManager::exportXml(juce::XmlElement& parentElement) {
 }
 
 
+
+
 void PresetManager::deletePreset(const juce::String& presetName) {
 	if (presetName.isEmpty()) {
 		return;
@@ -93,31 +132,49 @@ void PresetManager::deletePreset(const juce::String& presetName) {
 	currentPreset = "";
 }
 
+
+
+
 void PresetManager::loadPreset(const juce::String& presetName) {
 	if (presetName.isEmpty()) return;
 
-	const auto presetFile = defaultDir.getChildFile(presetName + "." + extension);
-	if (!presetFile.existsAsFile()) return;
+	if (presetName == "Default") {
+		// Use the same loading structure as regular presets
+		auto xml = juce::XmlDocument::parse(defaultPresetXml);
+		if (!xml || xml->getTagName() != "Preset") {
+			jassertfalse;  // Invalid embedded XML
+			return;
+		}
 
-	// 1. Parse XML file
-	juce::XmlDocument xmlDoc(presetFile);
-	std::unique_ptr<juce::XmlElement> mainElement(xmlDoc.getDocumentElement());
+		// 1. Load APVTS state
+		if (auto* paramsXml = xml->getChildByName("Parameters")) {
+			apvts.replaceState(juce::ValueTree::fromXml(*paramsXml));
+		}
 
-	if (!mainElement || mainElement->getTagName() != "Preset") {
-		// Handle invalid preset file
+		// 2. Load custom data
+		importXml(*xml);
+
+		// 3. Update state and notify
+		currentPreset = "Default";
+		sendChangeMessage();
 		return;
 	}
 
-	// 2. Load APVTS state
+	// Existing code for file-based presets
+	const auto presetFile = defaultDir.getChildFile(presetName + "." + extension);
+	if (!presetFile.existsAsFile()) return;
+
+	juce::XmlDocument xmlDoc(presetFile);
+	std::unique_ptr<juce::XmlElement> mainElement(xmlDoc.getDocumentElement());
+
+	if (!mainElement || mainElement->getTagName() != "Preset") return;
+
 	if (auto* paramsXml = mainElement->getChildByName("Parameters")) {
 		apvts.replaceState(juce::ValueTree::fromXml(*paramsXml));
 	}
 
-	// 3. Load custom data
 	importXml(*mainElement);
 	currentPreset = presetName;
-
-	//4. notify ui elements to reload
 	sendChangeMessage();
 }
 
@@ -159,11 +216,12 @@ void PresetManager::importXml(const juce::XmlElement& parentElement) {
 
 juce::StringArray PresetManager::getAllPresets() const {
 	juce::StringArray presets;
+	presets.add("Default");
 	const auto fileArray = defaultDir.findChildFiles(
 		juce::File::TypesOfFileToFind::findFiles, false, "*." + extension);
-	for (const auto& file : fileArray)
-	{
-		presets.add(file.getFileNameWithoutExtension());
+	for (const auto& file : fileArray){
+		const auto name = file.getFileNameWithoutExtension();
+		if(name != "Default") presets.add(name);	//can't load a file called default.preset
 	}
 	return presets;
 }

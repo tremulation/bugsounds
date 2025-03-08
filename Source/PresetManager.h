@@ -36,7 +36,7 @@ public:
     juce::String getCurrentPreset() const;
 
 private:
-
+    static const juce::String defaultPresetXml;
     juce::AudioProcessorValueTreeState& apvts;
     juce::String& freqSong;
     juce::String& resSong;
