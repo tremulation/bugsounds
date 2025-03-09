@@ -57,7 +57,6 @@ PresetManager::PresetManager(juce::AudioProcessorValueTreeState& valueTreeState,
 	juce::String& resSongRef,std::vector<Pip>& pipsRef, BugsoundsAudioProcessor& p)
 	: apvts(valueTreeState), freqSong(freqSongRef), resSong(resSongRef), pips(pipsRef), audioProcessor(p)
 {
-	currentPreset = "Default";
 	//create a default director for presets if it doesn't exist yet
 	if (!defaultDir.exists()) {
 		const auto result = defaultDir.createDirectory();
@@ -67,23 +66,17 @@ PresetManager::PresetManager(juce::AudioProcessorValueTreeState& valueTreeState,
 
 
 void PresetManager::savePreset(const juce::String& presetName) {
-	if (presetName.isEmpty()) return;
+	if (presetName.isEmpty())return;
 
-	// 1. Create root XML element
+	//create root XML element and let exportXml populate it
 	juce::XmlElement mainElement("Preset");
-	mainElement.setAttribute("version", "1.0");
-
-	// 2. Export APVTS parameters into XML
-	std::unique_ptr<juce::XmlElement> parametersXml = apvts.copyState().createXml();
-	mainElement.addChildElement(parametersXml.release());  // Attach APVTS data
-
-	// 3. Export custom data
 	exportXml(mainElement);
 
-	// 4. Write the complete XML to file
+	//write to file
 	const auto presetFile = defaultDir.getChildFile(presetName + "." + extension);
 	if (!mainElement.writeToFile(presetFile, {})) {
-		// Handle error
+		// Handle file write error
+		jassertfalse;
 	}
 
 	currentPreset = presetName;
@@ -91,16 +84,25 @@ void PresetManager::savePreset(const juce::String& presetName) {
 
 
 
+void PresetManager::exportXml(juce::XmlElement& parentElement){
+	// Set XML version attribute
+	parentElement.setAttribute("version", "1.0");
 
-void PresetManager::exportXml(juce::XmlElement& parentElement) {
+	//save APVTS parameters
+	if (auto paramsXml = apvts.copyState().createXml())
+		parentElement.addChildElement(paramsXml.release());
+
+	//save custom data
 	auto* customData = new juce::XmlElement("CUSTOM_DATA");
 	parentElement.addChildElement(customData);
 
-	// Add string data
-	customData->createNewChildElement("FREQ_SONG")->setAttribute("value", freqSong);
-	customData->createNewChildElement("RES_SONG")->setAttribute("value", resSong);
+	//save string parameters
+	customData->createNewChildElement("FREQ_SONG")
+		->setAttribute("value", freqSong);
+	customData->createNewChildElement("RES_SONG")
+		->setAttribute("value", resSong);
 
-	// Add Pips collection
+	//save Pips collection
 	auto* pipsElement = customData->createNewChildElement("PIPS");
 	for (const auto& pip : pips) {
 		auto* pipElement = pipsElement->createNewChildElement("PIP");
@@ -137,80 +139,65 @@ void PresetManager::deletePreset(const juce::String& presetName) {
 
 void PresetManager::loadPreset(const juce::String& presetName) {
 	if (presetName.isEmpty()) return;
-
+	std::unique_ptr<juce::XmlElement> xml;
 	if (presetName == "Default") {
-		// Use the same loading structure as regular presets
-		auto xml = juce::XmlDocument::parse(defaultPresetXml);
-		if (!xml || xml->getTagName() != "Preset") {
-			jassertfalse;  // Invalid embedded XML
-			return;
-		}
+		//load default preset from embedded XML
+		xml = juce::XmlDocument::parse(defaultPresetXml);
+	}else {
+		//load from file
+		const auto presetFile = defaultDir.getChildFile(presetName + "." + extension);
+		if (!presetFile.existsAsFile()) return;
+		xml = juce::XmlDocument(presetFile).getDocumentElement();
+	}
 
-		// 1. Load APVTS state
-		if (auto* paramsXml = xml->getChildByName("Parameters")) {
-			apvts.replaceState(juce::ValueTree::fromXml(*paramsXml));
-		}
-
-		// 2. Load custom data
-		importXml(*xml);
-
-		// 3. Update state and notify
-		currentPreset = "Default";
-		sendChangeMessage();
+	//validate XML root element
+	if (!xml || xml->getTagName() != "Preset") {
+		jassertfalse; // Invalid XML structure
 		return;
 	}
 
-	// Existing code for file-based presets
-	const auto presetFile = defaultDir.getChildFile(presetName + "." + extension);
-	if (!presetFile.existsAsFile()) return;
+	//process xml
+	importXml(*xml);
 
-	juce::XmlDocument xmlDoc(presetFile);
-	std::unique_ptr<juce::XmlElement> mainElement(xmlDoc.getDocumentElement());
-
-	if (!mainElement || mainElement->getTagName() != "Preset") return;
-
-	if (auto* paramsXml = mainElement->getChildByName("Parameters")) {
-		apvts.replaceState(juce::ValueTree::fromXml(*paramsXml));
-	}
-
-	importXml(*mainElement);
+	//update state and notify
 	currentPreset = presetName;
 	sendChangeMessage();
 }
 
 
 void PresetManager::importXml(const juce::XmlElement& parentElement) {
-	juce::String fs = "";
-	juce::String rs = "";
-	std::vector<Pip> pipi;
+	//load APVTS parameters from "Parameters" child
+	if (auto* paramsXml = parentElement.getChildByName("Parameters")) {
+		apvts.replaceState(juce::ValueTree::fromXml(*paramsXml));
+	}
+
+	//load custom data from "CUSTOM_DATA" child
+	juce::String freqSong, resSong;
+	std::vector<Pip> pips;
+
 	if (auto* customData = parentElement.getChildByName("CUSTOM_DATA")) {
+		//load FREQ_SONG and RES_SONG
+		if (auto* freqElement = customData->getChildByName("FREQ_SONG"))
+			freqSong = freqElement->getStringAttribute("value");
 
-		// Load string data
-		if (auto* freqElement = customData->getChildByName("FREQ_SONG")) {
-			fs = freqElement->getStringAttribute("value");
-		}
+		if (auto* resElement = customData->getChildByName("RES_SONG"))
+			resSong = resElement->getStringAttribute("value");
 
-		if (auto* resElement = customData->getChildByName("RES_SONG")) {
-			rs = resElement->getStringAttribute("value");
-		}
-
-		// Load Pips collection
+		//load pip list
 		if (auto* pipsElement = customData->getChildByName("PIPS")) {
-			pipi.clear();
 			for (auto* pipElement : pipsElement->getChildWithTagNameIterator("PIP")) {
 				Pip pip;
 				pip.frequency = pipElement->getDoubleAttribute("freq");
 				pip.length = pipElement->getDoubleAttribute("len");
 				pip.tail = pipElement->getDoubleAttribute("tail");
 				pip.level = pipElement->getDoubleAttribute("level");
-
-				pipi.push_back(pip);
+				pips.push_back(pip);
 			}
 		}
-
-		//send them to the processor to load
-		audioProcessor.propogatePresetLoad(fs, rs, pipi);
 	}
+
+	// Propagate loaded data to the processor
+	audioProcessor.propogatePresetLoad(freqSong, resSong, pips);
 }
 
 
@@ -229,6 +216,10 @@ juce::StringArray PresetManager::getAllPresets() const {
 
 juce::String PresetManager::getCurrentPreset() const {
 	return currentPreset;
+}
+
+void PresetManager::setCurrentPresetName(const juce::String& pname) {
+	 currentPreset = pname;
 }
 
 

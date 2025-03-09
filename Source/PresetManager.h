@@ -34,6 +34,7 @@ public:
 
     juce::StringArray getAllPresets() const;
     juce::String getCurrentPreset() const;
+    void setCurrentPresetName(const juce::String& pname);
 
 private:
     static const juce::String defaultPresetXml;
