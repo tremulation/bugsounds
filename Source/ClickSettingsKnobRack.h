@@ -32,6 +32,15 @@ public:
 		initializeKnob(lowFreqAttenuationKnob, lowFreqAttenuationLabel, "Freq Fadeout", "Click Low Frequency Attenuation", lowFreqAttenuationAttachment);
 		initializeKnob(minVolFreqKnob, minVolFreqLabel, "Min Vol Freq", "Click Min Volume Frequency", minVolFreqAttachment);
 		initializeKnob(maxVolFreqKnob, maxVolFreqLabel, "Max Vol Freq", "Click Max Volume Frequency", maxVolFreqAttachment);
+
+        //setup click vol slider
+        clickVolumeLabel.setText("vol", juce::dontSendNotification);
+        clickVolumeLabel.setJustificationType(juce::Justification::centred);
+        addAndMakeVisible(clickVolumeLabel);
+        clickVolumeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+        clickVolumeSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+        addAndMakeVisible(clickVolumeSlider);
+        clickVolumeAttachment = std::make_unique<SliderAttachment>(audioProcessor.apvts, "Click Volume", clickVolumeSlider);
     }
 
 
@@ -62,28 +71,35 @@ public:
         const int margin = 5;
         auto bounds = getLocalBounds().reduced(margin);
 
-        // Position the title at the top.
+        //position the title at the top.
         const int titleHeight = 30;
         auto titleBounds = bounds.removeFromTop(titleHeight);
         titleLabel.setBounds(titleBounds.reduced(5, 0));
 
-        // Add some spacing after the title.
+        //click volume slider
+        const int volLabelWidth = 30;
+        const int volSliderWidth = 100;
+        auto sliderContainer = titleBounds.reduced(5, 5).removeFromRight(volLabelWidth + volSliderWidth).withTrimmedLeft(10);
+        clickVolumeLabel.setBounds(sliderContainer.removeFromLeft(volLabelWidth));
+        clickVolumeSlider.setBounds(sliderContainer.removeFromLeft(volSliderWidth));
+
+        //add some spacing after the title.
         bounds.removeFromTop(5);
 
-        // Divide the remaining area into two rows.
+        //divide the remaining area into two rows.
         auto rowHeight = bounds.getHeight() / 2;
         auto topRow = bounds.removeFromTop(rowHeight);
         auto bottomRow = bounds; // what's left is the bottom row
 
-        // Hardcoded knob size and label height.
+        //hardcoded knob size and label height.
         const int knobSize = 60;
         const int labelHeight = 20;
 
-        // New variables: loweringOffset shifts knobs downward, and labelSpacing adds extra space between knobs and labels.
+        //loweringOffset shifts knobs downward, and labelSpacing adds extra space between knobs and labels.
         const int loweringOffset = -10;
         const int labelSpacing = 5;
 
-        // ----- Top row layout (Timing, Pitch, and A/D Ratio) -----
+        // ----- top row layout (timing, pitch, and A/D Ratio) -----
         int topColumnWidth = topRow.getWidth() / 3;
 
         auto topCol0 = topRow.removeFromLeft(topColumnWidth);
@@ -98,7 +114,7 @@ public:
         adRatioKnob.setBounds(topCol2.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
         adRatioLabel.setBounds(topCol2.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 
-        // ----- Bottom row layout (Min Vol Freq, Max Vol Freq, and Low Freq Attenuation) -----
+        // ----- bottom row layout (min Vol Freq, max Vol Freq, and low freq attenuation) -----
         int bottomColumnWidth = bottomRow.getWidth() / 3;
 
         auto bottomCol0 = bottomRow.removeFromLeft(bottomColumnWidth);
@@ -109,7 +125,7 @@ public:
         maxVolFreqKnob.setBounds(bottomCol1.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
         maxVolFreqLabel.setBounds(bottomCol1.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 
-        auto bottomCol2 = bottomRow; // remaining area
+        auto bottomCol2 = bottomRow; //remaining area
         lowFreqAttenuationKnob.setBounds(bottomCol2.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
         lowFreqAttenuationLabel.setBounds(bottomCol2.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
     }
@@ -139,6 +155,11 @@ private:
     std::unique_ptr<SliderAttachment> lowFreqAttenuationAttachment;
     std::unique_ptr<SliderAttachment> minVolFreqAttachment;
     std::unique_ptr<SliderAttachment> maxVolFreqAttachment;
+
+    juce::Slider clickVolumeSlider;
+    juce::Label clickVolumeLabel;
+    std::unique_ptr<SliderAttachment> clickVolumeAttachment;
+
 
 
     BugsoundsAudioProcessor& audioProcessor;

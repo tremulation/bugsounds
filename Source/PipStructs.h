@@ -33,14 +33,14 @@ struct Pip {
 };
 
 namespace PipConstants {
-    const float MIN_FREQUENCY = 20.0f;     // Hz - lowest audible frequency
-    const float MAX_FREQUENCY = 20000.0f;  // Hz - upper limit of human hearing
+    const float MIN_FREQUENCY = 20.0f;      // Hz - lowest audible frequency
+    const float MAX_FREQUENCY = 20000.0f;   // Hz - upper limit of human hearing
 
-    const int MIN_LENGTH = 1;           // microseconds - shortest duration (1µs)
-    const int MAX_LENGTH = 100000;   // microseconds - max duration (100ms)
+    const int MIN_LENGTH = 1;               // microseconds - shortest duration (1µs)
+    const int MAX_LENGTH = 100000;          // microseconds - max duration (100ms)
 
-    const int MIN_TAIL = 0;             // microseconds - no tail (0ns)
-    const int MAX_TAIL = 100000;     // microseconds - max tail (100ms)
+    const int MIN_TAIL = 0;                 // microseconds - no tail (0ns)
+    const int MAX_TAIL = 100000;            // microseconds - max tail (100ms)
 
     const float MIN_LEVEL = 0.0f;           // silent
     const float MAX_LEVEL = 1.0f;           // maximum volume

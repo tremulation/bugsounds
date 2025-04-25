@@ -108,7 +108,6 @@ void BugsoundsAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     juce::ignoreUnused(samplesPerBlock);    //clears out unused samples from last key press
     lastSampleRate = sampleRate;
     mySynth.setCurrentPlaybackSampleRate(lastSampleRate);
-    myVoice->prepareToPlay(sampleRate, samplesPerBlock);
 
     if (clickPreviewer != nullptr) {
         clickPreviewer->prepareToPlay(samplesPerBlock, sampleRate);
@@ -280,6 +279,45 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
         "Click Min Volume Frequency",
         juce::NormalisableRange<float>(0.0f, 1000.0f, 1.f, 1.0f),
         0.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Click Volume",
+        "Click Volume",
+        juce::NormalisableRange<float>(-60.0f, 0.0f, 0.1f),
+        -6.0f  
+    ));
+
+    //chorus parameters
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "Chorus On", 
+        "Chorus On", 
+        false));
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        "Chorus Count",
+        "Chorus Count",
+        1,
+        10, 
+        3));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Chorus Stereo Spread",
+        "Chorus Stereo Spread",
+        juce::NormalisableRange<float>(0.0f, 1.0f),
+        0.7f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Chorus Max Distance",
+        "Chorus Max Distance",
+        juce::NormalisableRange<float>(0.0f, 1.0f),
+        0.5f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Chorus Excitation",
+        "Chorus Excitation",
+        juce::NormalisableRange<float>(0.0f, 1.0f),
+        0.8f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Chorus Correlation",
+        "Chorus Correlation",
+        juce::NormalisableRange<float> { -1.0f, 1.0f, 0.01f },
+        0.0f  // -1 is dispersed, 0 is random, 1 is correlated
+    ));
 
     return layout;
 }

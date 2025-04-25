@@ -13,7 +13,7 @@
 //==============================================================================
 BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p), frequencyEditor("Frequency Editor", audioProcessor),
-	resonatorEditor("Resonator Editor", audioProcessor), resonatorKnobRack(p, *this), headerBar(p), pipSequencer(p)
+	resonatorEditor("Resonator Editor", audioProcessor), resonatorKnobRack(p, *this), headerBar(p), pipSequencer(p), chorusKnobRack(p, *this)
 {
     addAndMakeVisible(headerBar);
 
@@ -29,6 +29,7 @@ BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProce
 
     addAndMakeVisible(clickSettingsRack);
     addAndMakeVisible(resonatorKnobRack);
+	addAndMakeVisible(chorusKnobRack);
     setSize(800, 640);
     
 }
@@ -81,6 +82,7 @@ void BugsoundsAudioProcessorEditor::resized()
     resonatorEditor.setBounds(workingArea.removeFromTop(editorHeight));
     workingArea.removeFromTop(padding);
 
+
     //test button at the bottom with padding on all sides
     auto buttonArea = workingArea.removeFromTop(buttonHeight);
     testButton.setBounds(buttonArea.reduced(padding, 0));
@@ -88,6 +90,7 @@ void BugsoundsAudioProcessorEditor::resized()
     //right area for controls
     clickSettingsRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2));
     resonatorKnobRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2)); //30 is title height
+    chorusKnobRack.setBounds(area);
 }
 
 

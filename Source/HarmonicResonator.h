@@ -16,7 +16,6 @@
 #include <algorithm>
 
 //not a helmholtz resonator anymore. 
-//bank of resonators, one on the fundamental, and a couple more on the harmonics.
 //based on the max patch in prototypes
 class HarmonicResonator {
 public:
@@ -56,6 +55,16 @@ public:
 		}
 
         return outputSample;
+    }
+
+    //do this only once a block, to ensure efficiency
+    void loadParams() {
+        //load parameters
+        overtoneDecay = *apvts->getRawParameterValue("Resonator Overtone Decay");
+        n = *apvts->getRawParameterValue("Resonator Overtone Number");
+        q = *apvts->getRawParameterValue("Resonator Q");
+        gain = *apvts->getRawParameterValue("Resonator Gain");
+        originalScalar = *apvts->getRawParameterValue("Resonator Original Mix");
     }
 
 
@@ -98,12 +107,6 @@ public:
 
             float highestScalar = 0.0f;  //store the max peak gain per frequency bin
 
-            //load parameters
-            float overtoneDecay = *apvts->getRawParameterValue("Resonator Overtone Decay");
-			float n = *apvts->getRawParameterValue("Resonator Overtone Number");
-            float q = *apvts->getRawParameterValue("Resonator Q");
-            float gain = *apvts->getRawParameterValue("Resonator Gain");
-			float originalScalar = *apvts->getRawParameterValue("Resonator Original Mix");
 
             for (int harmonic = 1; harmonic <= n; harmonic++) {  //fundamental, followed by harmonics
                 float overtoneScaler = (harmonic == 1) ? 1.0f : std::pow(overtoneDecay, harmonic - 1);
@@ -181,6 +184,13 @@ private:
     juce::AudioProcessorValueTreeState* apvts = nullptr;
     juce::dsp::FFT fourierf, fourieri;
     juce::dsp::WindowingFunction<float> windowFunction;
+
+    /// APVT paramers
+    float overtoneDecay = 0.0f;
+    float n = 0.0f;
+    float q = 0.0f;
+    float gain = 0.0f;
+    float originalScalar = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(HarmonicResonator)
 };
