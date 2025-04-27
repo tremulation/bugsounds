@@ -14,6 +14,7 @@
 //hardcoded default preset
 const juce::String PresetManager::defaultPresetXml = R"(
 <?xml version="1.0" encoding="UTF-8"?>
+
 <Preset version="1.0">
   <Parameters>
     <PARAM id="Click Atack Decay Ratio" value="0.2100000083446503"/>
@@ -28,6 +29,13 @@ const juce::String PresetManager::defaultPresetXml = R"(
     <PARAM id="Resonator Overtone Decay" value="0.5"/>
     <PARAM id="Resonator Overtone Number" value="10.0"/>
     <PARAM id="Resonator Q" value="37.0"/>
+    <PARAM id="Chorus Cooldown Max" value="10.03200054168701"/>
+    <PARAM id="Chorus Correlation"/>
+    <PARAM id="Chorus Count" value="5.0"/>
+    <PARAM id="Chorus Max Distance" value="7.399999618530273"/>
+    <PARAM id="Chorus On" value="0.0"/>
+    <PARAM id="Chorus Stereo Spread"/>
+    <PARAM id="Click Volume"/>
   </Parameters>
   <CUSTOM_DATA>
     <FREQ_SONG value="120 1000, 0 1000"/>
@@ -143,6 +151,8 @@ void PresetManager::loadPreset(const juce::String& presetName) {
 	if (presetName == "Default") {
 		//load default preset from embedded XML
 		xml = juce::XmlDocument::parse(defaultPresetXml);
+		currentPreset = presetName;
+		sendChangeMessage();
 	}else {
 		//load from file
 		const auto presetFile = defaultDir.getChildFile(presetName + "." + extension);

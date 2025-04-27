@@ -17,69 +17,67 @@
 class Spatializer {
 public:
 	using ProcessChain = juce::dsp::ProcessorChain<
-		juce::dsp::DelayLine<float>,	//predelay
+		juce::dsp::Gain<float>,			//distance attenuation
 		juce::dsp::IIR::Filter<float>,	//high shelf filter
-		juce::dsp::Reverb				//reverb	
+		juce::dsp::Reverb				//reverb
 	>;
+
+	//keep the panner separate so the chain stays mono
+	juce::dsp::Panner<float> panner;	
 
 	//sets up the processorChain, and sets the parameters for the current voice
 	//should be called when a voice is created, and every time its dist/angle is randomized
 	void prepare(float distance, float angle, const juce::dsp::ProcessSpec& spec) {
 		currentSpec = spec;
-		chain.prepare(spec);
+
+		//ensure the spec is mono
+		juce::dsp::ProcessSpec monoSpec = spec;
+		monoSpec.numChannels = 1;
+
+		chain.prepare(monoSpec);
+		panner.prepare(spec);
 
 		//set up distance gains and panning
 		updatePosition(distance, angle);
-
-		//calculate predelay
-		auto& delay = chain.get<0>();
-		delay.setMaximumDelayInSamples((100.0f / 1000.0f) * spec.sampleRate);	//100ms max delay time
-		delay.reset();
-		const float preDelayMs = juce::jmap(distance, 0.01f, 1.0f, 10.0f, 50.0f); //10ms to 50ms
-		delay.setDelay((preDelayMs / 1000.0f) * spec.sampleRate); //convert to samples
-
-		//calculate the highpass filter cutoff frequency
-		const float effectiveDistance = std::max(0.01f, distance);
-		const float filterCutoffFreq = 6000.0f; //fixed cutoff freq (high end)
-		const float maxDistance      = 1.0f; //from 0 to 1
-		const float Q                = 0.5f;	//small Q = wide Q
-		const float resonanceCut = juce::jmap(effectiveDistance,
-			0.01f, 1.f,
-			1.f  , 0.3f);	//more resonance further away(more attenuation)
-
-		auto& filter = chain.get<1>();
-		auto filterCoeffs = juce::dsp::IIR::Coefficients<float>::makeHighShelf(
-			spec.sampleRate,
-			filterCutoffFreq,
-			resonanceCut,
-			Q); 
-		filter.coefficients = *filterCoeffs;
-		filter.reset();
-
-		//configure reverb
-		//trying to approximate a diffuse, outside sound where waves are bouncing off trees and the ground
-		//not really any walls
-		auto& reverb = chain.get<2>();
-		juce::dsp::Reverb::Parameters reverbParams;
-		reverbParams.roomSize = 0.65f; 
-		//damping is variable, since sound gets more diffuse the further it has to travel. it spreads out.
-		reverbParams.damping = 0.95f;	//strong damping
-		reverbParams.wetLevel = juce::jmap(distance, 0.01f, 1.0f, 0.05f, 0.15f);
-		reverbParams.dryLevel = 1.0f - reverbParams.wetLevel;
-		reverbParams.width = 0.8;
-		reverb.setParameters(reverbParams);
 	}
 
 
 	void updatePosition(float newDistance, float newAngle) {
-		//calculate distance falloff based on inverse square law. decibels are confuse.
-		const float minDistance = 0.01f;	//no divide by 0
-		const float effectiveDistance = std::max(minDistance, newDistance);
-		const float distanceQuieting = 1.0f / (1 + effectiveDistance * effectiveDistance);
+		const float minDistance = 5.0f;
+		const float maxDistance = 15.0f;
 
-		//calculate left/right gains for panning
-		leftGain = std::cos(newAngle * 0.5) * distanceQuieting;
-		rightGain = std::sin(newAngle * 0.5) * distanceQuieting;
+		//GAIN: calculate gain based on inverse square law
+		float distanceFactor = minDistance / newDistance;
+		float gainFactor = distanceFactor * distanceFactor;
+		float gainDB = juce::jlimit(-30.0f, 0.0f, juce::Decibels::gainToDecibels(gainFactor));
+		chain.get<0>().setGainDecibels(gainDB);
+
+		//HIGH SHELF FILTER: 
+		//get distance from 0 to 1 for scaling params
+		float normalizedDistance = (newDistance - minDistance) / (maxDistance - minDistance);
+		//higher distance means lower cutoff
+		float cutoffFreq = juce::jmap(normalizedDistance, 10000.0f, 400.0f);
+		//higher distance is more attenuation. 0 dB close, -48 dB far
+		float shelfGainDB = juce::jmap(normalizedDistance, 0.0f, -48.0f);
+		float q = 0.7f;
+		auto highShelfCoefs = juce::dsp::IIR::Coefficients<float>::makeHighShelf(
+			currentSpec.sampleRate, cutoffFreq, q, juce::Decibels::decibelsToGain(shelfGainDB));
+		chain.get<1>().coefficients = highShelfCoefs;
+
+		//REVERB: 
+		juce::Reverb::Parameters reverbParams;
+		reverbParams.wetLevel = juce::jmap(normalizedDistance, 0.1f, 0.5f);
+		reverbParams.roomSize = juce::jmap(normalizedDistance, 0.4f, 0.8f);
+		reverbParams.damping  = juce::jmap(normalizedDistance, 0.2f, 0.4f);
+		reverbParams.dryLevel = 1 - reverbParams.wetLevel;
+		reverbParams.width = 1.0f;
+
+		chain.get<2>().setParameters(reverbParams);
+
+		//PANNING: map angle (0 to 2pi) to the panners -1 to 1 range
+		//we only care about x-axis projection since we're working with stereo
+		float normalizedPan = juce::jlimit(-1.0f, 1.0f, std::cos(newAngle));
+		panner.setPan(normalizedPan);
 	}
 
 
@@ -88,41 +86,49 @@ public:
 
 	//processes the block of audio
 	//has to be done blockwise, so this isn't by-sample, like click generation
-	//apply the chain, THEN pan/spatialize the output with leftGain/rightGain
 	void processBlock(const juce::AudioBuffer<float>& inBuffer,
 				      juce::AudioBuffer<float>& outBuffer,	
 		              int outputStartSample, int numSamples) {
+
+		//MONO CHAIN SECTION
 		//ensure mono in, stereo out, same numSamples to fill
 		jassert(inBuffer.getNumChannels() == 1);
 		jassert(outBuffer.getNumChannels() == 2);
 		jassert(outputStartSample + numSamples <= outBuffer.getNumSamples());
 
-		//copy mono input to temp buffer
-		juce::AudioBuffer<float> tempBuffer (1, numSamples);
-		tempBuffer.copyFrom(0,				//destChannel
-			                0,				//destStartSample
-							inBuffer,		//sourceBuffer
-							0,				//sourceChannel
-							0,				//sourceStartSample
-							numSamples);	//numSamples
+		//create a temporary mono buffer for processing
+		juce::AudioBuffer<float> monoBuffer(1, numSamples);
+		monoBuffer.clear();
+		monoBuffer.copyFrom(0, 0, inBuffer, 0, 0, numSamples);
 
-		//create context for processing
-		juce::dsp::AudioBlock<float> block(tempBuffer);
+		//process through the chain
+		juce::dsp::AudioBlock<float> block(monoBuffer);
 		juce::dsp::ProcessContextReplacing<float> context(block);
-		
-		//apply the reverb/filter chain to the context
 		chain.process(context);
 
-		//stereoize the output and write it to the buffer
-		auto* outL = outBuffer.getWritePointer(0) + outputStartSample;
-		auto* outR = outBuffer.getWritePointer(1) + outputStartSample;
-		auto* processedOutput = tempBuffer.getReadPointer(0);
-		auto* input = inBuffer.getReadPointer(0);
-		for (int i = 0; i < numSamples; i++) {
-			outL[i] += processedOutput[i] * leftGain;
-			outR[i] += processedOutput[i] * rightGain;
+
+		//STEREOIZATION SECTION
+		juce::AudioBuffer<float> stereoBuffer(2, numSamples);
+
+		//copy the processed mono data to both channels
+		for (int channel = 0; channel < 2; ++channel) {
+			stereoBuffer.copyFrom(channel, 0, monoBuffer, 0, 0, numSamples);
+		}
+
+		//apply panning
+		juce::dsp::AudioBlock<float> stereoblock(stereoBuffer);
+		juce::dsp::ProcessContextReplacing<float> steroContext(stereoblock);
+		panner.process(steroContext);
+
+		//add processed stereo output to outBuffer
+		for (int channel = 0; channel < 2; ++channel) {
+			outBuffer.addFrom(channel, outputStartSample, stereoBuffer, channel, 0, numSamples);
 		}
 	}
+
+
+	//=====================================================================================
+
 
 	void reset() {
 		chain.reset();

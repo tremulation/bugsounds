@@ -80,7 +80,10 @@ public:
 
     float renderActiveSubClicks() {
         double output = 0.0;
-        for (auto& click : activeSubClicks) {
+        std::vector<int> clicksToRemove;
+
+        for (size_t i = 0; i < activeSubClicks.size(); ++i) {
+            auto& click = activeSubClicks[i];
             // Render the click audio only.
             float oscVal = std::sin(click.phase * 2.0 * juce::MathConstants<double>::pi);
             click.phase += click.frequency / currentSampleRate;
@@ -93,15 +96,17 @@ public:
             click.curLevel += click.levelChangePerSample;
             output += oscVal * click.curLevel;
             click.samplesRemaining--;
+
+            if (click.samplesRemaining <= 0) {
+                clicksToRemove.push_back(i);
+            }
         }
 
         // Remove finished subclicks.
         activeSubClicks.erase(
             std::remove_if(activeSubClicks.begin(), activeSubClicks.end(),
-                [](const auto& click) { 
-                    //it only prints finishing pip once, meaning only one pip is ever played
-                    if(click.samplesRemaining <= 0) juce::Logger::writeToLog("Finishing pip");
-                    return click.samplesRemaining <= 0; 
+                [](const auto& click) {
+                    return click.samplesRemaining <= 0;
                 }),
             activeSubClicks.end()
         );

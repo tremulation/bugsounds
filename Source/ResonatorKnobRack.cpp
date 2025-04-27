@@ -64,6 +64,28 @@ void ResonatorKnobRack::paint(juce::Graphics& g)
         1.0f);
 }
 
+
+void ResonatorKnobRack::paintOverChildren(juce::Graphics& g) {
+    bool resonatorOn = audioProcessor.apvts.getRawParameterValue("Resonator On")->load() > 0.5f;
+    if (!resonatorOn) {
+
+        //mask the power button so it doesn't look like it's disabled too
+        auto overlayBounds = getLocalBounds().reduced(5);
+        auto powerButtonArea = powerButton->getBounds();
+        auto originalClip = g.getClipBounds();
+        g.excludeClipRegion(powerButtonArea);
+
+        g.setColour(juce::Colours::black.withAlpha(0.3f));
+        g.fillRect(getLocalBounds().reduced(5));
+
+        //draw the text
+        g.setColour(juce::Colours::white);
+        g.setFont(24.0f);
+        g.drawText("DISABLED", getLocalBounds(), juce::Justification::centred, true);
+        repaint();
+    }
+}
+
 void ResonatorKnobRack::resized()
 {
     const int margin = 5;

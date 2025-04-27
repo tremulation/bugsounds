@@ -28,6 +28,8 @@ BugsoundsAudioProcessor::BugsoundsAudioProcessor()
     myVoice = new SynthVoice();
     mySynth.addVoice(myVoice);
     myVoice->setAPVTS(&apvts);
+    myVoice->setOwner(*this);
+    myVoice->beginPeriodicChorusUpdates();
     mySynth.clearSounds();
     mySynth.addSound(new SynthSound());
 
@@ -305,13 +307,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Chorus Max Distance",
         "Chorus Max Distance",
-        juce::NormalisableRange<float>(0.0f, 1.0f),
-        0.5f));
+        juce::NormalisableRange<float>(5.0f, 15.0f),
+        5.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "Chorus Excitation",
-        "Chorus Excitation",
-        juce::NormalisableRange<float>(0.0f, 1.0f),
-        0.8f));
+        "Chorus Cooldown Max",
+        "Chorus Cooldown Max",
+        juce::NormalisableRange<float>(0.0f, 24.0f),
+        6.f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Chorus Correlation",
         "Chorus Correlation",

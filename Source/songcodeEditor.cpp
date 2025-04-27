@@ -198,8 +198,6 @@ void SongcodeEditor::paintOverlay(juce::Graphics& g)
     g.setColour(juce::Colours::white);
     g.setFont(24.0f);
     g.drawText("DISABLED", getLocalBounds(), juce::Justification::centred, true);
-    //recompile pls
-    10 + 1;
 }
 
 

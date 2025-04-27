@@ -29,11 +29,27 @@ ChorusKnobRack::ChorusKnobRack(BugsoundsAudioProcessor& processor, BugsoundsAudi
     initializeKnob(countKnob, countLabel, "Count", "Chorus Count", countAttachment);
     initializeKnob(spreadKnob, spreadLabel, "Spread", "Chorus Stereo Spread", spreadAttachment);
     initializeKnob(distanceKnob, distanceLabel, "Distance", "Chorus Max Distance", distanceAttachment);
-    initializeKnob(excitationKnob, excitationLabel, "Excitation", "Chorus Excitation", excitationAttachment);
+    initializeKnob(cooldownKnob, cooldownLabel, "Cooldown", "Chorus Cooldown Max", cooldownAttachment);
 	initializeKnob(correlationKnob, correlationLabel, "Correlation", "Chorus Correlation", correlationAttachment);
 
     powerButtonAttachment = std::make_unique<ButtonAttachment>(
         audioProcessor.apvts, "Chorus On", *powerButton);
+
+    positionReadout = std::make_unique<ChorusPositionReadout>(processor);
+    addAndMakeVisible(positionReadout.get());
+
+    //fix spread knob value blocking the voice position readout
+    spreadKnob.setPopupDisplayEnabled(false, false, nullptr);
+
+    //randomize button
+    randomizeButton = std::make_unique<juce::TextButton>();
+    randomizeButton->setButtonText(""); // we'll draw text ourselves
+    randomizeButton->setLookAndFeel(&randomizeButtonLAF);
+    randomizeButton->onClick = [this](){
+        audioProcessor.rerollChorusVoicePositions();
+    };
+
+    addAndMakeVisible(randomizeButton.get());
 }
 
 void ChorusKnobRack::paint(juce::Graphics& g)
@@ -53,51 +69,94 @@ void ChorusKnobRack::paint(juce::Graphics& g)
         1.0f);
 }
 
+
+void ChorusKnobRack::paintOverChildren(juce::Graphics& g) {
+    bool chorusOn = audioProcessor.apvts.getRawParameterValue("Chorus On")->load() > 0.5f;
+    if (!chorusOn) {
+
+        //mask the power button so it doesn't look like it's disabled too
+        auto overlayBounds = getLocalBounds().reduced(5);
+        auto powerButtonArea = powerButton->getBounds();
+        auto originalClip = g.getClipBounds();
+        g.excludeClipRegion(powerButtonArea);
+
+        g.setColour(juce::Colours::black.withAlpha(0.3f));
+        g.fillRect(getLocalBounds().reduced(5));
+
+        //draw the text
+        g.setColour(juce::Colours::white);
+        g.setFont(24.0f);
+        g.drawText("DISABLED", getLocalBounds(), juce::Justification::centred, true);
+        repaint();
+    }
+}
+
+
 void ChorusKnobRack::resized()
 {
     const int margin = 5;
     auto bounds = getLocalBounds().reduced(margin);
 
-    //title row
+    // title row
     auto titleHeight = 30;
     auto titleBounds = bounds.removeFromTop(titleHeight);
     auto powerButtonBounds = titleBounds.removeFromLeft(titleHeight).reduced(5);
     powerButton->setBounds(powerButtonBounds);
     titleLabel.setBounds(titleBounds.reduced(5, 0));
 
-    //knob layout
+    // knob layout
     bounds.removeFromTop(5);
     const int knobSize = 60;
     const int labelHeight = 20;
     const int loweringOffset = -10;
     const int labelSpacing = 5;
+    const int randomizeButtonSize = 15; //small square button
 
-    //2 rows: 2 knobs top, 3 knobs bottom
+    // 2 rows: 2 knobs + readout on top, 3 knobs on bottom
     auto topRow = bounds.removeFromTop(bounds.getHeight() / 2);
     auto bottomRow = bounds;
 
-    // Top row
-    auto countArea = topRow.removeFromLeft(topRow.getWidth() / 2);
+    // Top row - split into 3 equal parts
+    auto topRowWidth = topRow.getWidth();
+    auto countArea = topRow.removeFromLeft(topRowWidth / 3);
+    auto readoutArea = topRow.removeFromLeft(topRowWidth / 3);
+    auto spreadArea = topRow; // whatever remains
+
+    // Left - Count
     countKnob.setBounds(countArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
     countLabel.setBounds(countArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 
-    auto spreadArea = topRow;
+    if (positionReadout){
+        auto readoutBounds = readoutArea.reduced(10); // small margin inside
+        positionReadout->setBounds(readoutBounds);
+
+        if (randomizeButton){
+            auto buttonX = readoutBounds.getRight();
+            auto buttonY = readoutBounds.getY();
+            randomizeButton->setBounds(buttonX, buttonY, randomizeButtonSize, randomizeButtonSize);
+        }
+    }
+
+    // Right - Spread
     spreadKnob.setBounds(spreadArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
     spreadLabel.setBounds(spreadArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 
-    // Bottom row
+    // Bottom row - split into 3
     auto distanceArea = bottomRow.removeFromLeft(bottomRow.getWidth() / 3);
+    auto excitationArea = bottomRow.removeFromLeft(bottomRow.getWidth() / 2);
+    auto correlationArea = bottomRow;
+
     distanceKnob.setBounds(distanceArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
     distanceLabel.setBounds(distanceArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 
-    auto excitationArea = bottomRow.removeFromLeft(bottomRow.getWidth() / 2);
-    excitationKnob.setBounds(excitationArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
-    excitationLabel.setBounds(excitationArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
+    cooldownKnob.setBounds(excitationArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
+    cooldownLabel.setBounds(excitationArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 
-    auto correlationArea = bottomRow;
     correlationKnob.setBounds(correlationArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
     correlationLabel.setBounds(correlationArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 }
+
+
 
 void ChorusKnobRack::initializeKnob(juce::Slider& slider, juce::Label& label,
     const juce::String& labelText, const juce::String& paramName,

@@ -82,6 +82,7 @@ public:
         myVoice->setPipSequence(pips);
     }
 
+
     //getter method for pips
     const std::vector<Pip>& getPips() const {
         return pips;
@@ -109,6 +110,23 @@ public:
         setPips(pipi);
     }
 
+
+    //for updating the chorus position readout in chorusKnobRack
+    struct ChorusVoicePosition {
+        float distance, angle;
+        bool isPlaying;
+    };
+
+    std::vector<ChorusVoicePosition> getChorusVoicePositions() {
+        return chorusVoicePositions;
+    }
+
+    void rerollChorusVoicePositions() { myVoice->randomizeChorusPositions(); }
+
+    void setChorusVoicePositions(std::vector<ChorusVoicePosition> newPositions) {
+        chorusVoicePositions = newPositions;
+    }
+
     //getter methods for freqSong, and resSong
     const juce::String& getFreqSong() const { return freqSong; }
     const juce::String& getResSong() const { return resSong; }
@@ -116,6 +134,9 @@ public:
     void triggerPreviewClick();
 	
 private:
+
+    std::vector<ChorusVoicePosition> chorusVoicePositions;
+
     juce::String freqSong = "";
     juce::String resSong = "";
     std::vector<Pip> pips;

@@ -4,6 +4,9 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="RIYwew" name="bugsounds">
     <GROUP id="{28D391B9-8AA7-A9B0-B4E4-937980DDCF90}" name="Source">
+      <FILE id="Z5td0W" name="SynthVoice.cpp" compile="1" resource="0" file="Source/SynthVoice.cpp"/>
+      <FILE id="k0qGOy" name="ChorusPositionReadout.h" compile="0" resource="0"
+            file="Source/ChorusPositionReadout.h"/>
       <FILE id="FCRkjM" name="Spatializer.h" compile="0" resource="0" file="Source/Spatializer.h"/>
       <FILE id="AuYBhT" name="powerButtonLAF.h" compile="0" resource="0"
             file="Source/powerButtonLAF.h"/>
