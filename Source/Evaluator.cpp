@@ -898,11 +898,11 @@ ScriptPtr generateAST(std::string& songcode, ErrorInfo *errorInfo) {
 
 std::vector<SongElement> evaluateAST(ScriptPtr ast, ErrorInfo* errorInfo, std::map<std::string, float>* vars) {
 	auto song = evaluateScript(ast, vars, errorInfo);
-	for (auto& elem : song) {
+	/*for (auto& elem : song) {
 		juce::Logger::writeToLog(elem.toString());
-	}
-	juce::Logger::writeToLog("------------Error------------");
-	juce::Logger::writeToLog(errorInfo->message);
+	}*/
+	/*juce::Logger::writeToLog("------------Error------------");
+	juce::Logger::writeToLog(errorInfo->message);*/
 	if (!ast) return {};
 	return song;
 }

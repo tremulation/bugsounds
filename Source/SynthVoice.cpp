@@ -97,6 +97,9 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
     const float timingRandomParam = *apvts->getRawParameterValue("Click Timing Random");
     const float clickVolumeParam = *apvts->getRawParameterValue("Click Volume");
     const int numChannels = outputBuffer.getNumChannels();
+    const bool resonatorOn = *apvts->getRawParameterValue("Resonator On");
+
+    if (resonatorOn) loadResonatorParams();
 
     // ======================== 3. COLLECT ACTIVE VOICES ========================
     //single voice for the mono mode, and every active/cooldown voice for the chorus mode
@@ -208,10 +211,13 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
             VoiceState* voice = activeVoices[v];
             juce::AudioBuffer<float>& voiceBuffer = tempBuffers[v];
             Spatializer& spatializer = *voice->spatializer;
-
+            voice->spatializer->updatePosition(voice->distance, voice->angle);
             spatializer.processBlock(voiceBuffer, outputBuffer, startSample, numSamples);
         }
     }
+
+    // ========================= 7. FINAL STEREO PROCESSING ============================
+       //todo maybe later
 }
 
 
@@ -248,10 +254,10 @@ void SynthVoice::pushChorusPositionsToUI(){
     const int chorusVoiceNumber = (int)*apvts->getRawParameterValue("Chorus Count");
     int count = 0;
 
-    for (size_t v = 0; v < voices.size() && count < chorusVoiceNumber; ++v){
+    for (size_t v = 0; v < chorusVoiceNumber && v < (int)voices.size(); ++v) {
+        if (voices[v] == nullptr) continue;
         auto* voice = voices[v].get();
-        if (!voice || voice->state == VoiceState::VoiceStateState::Dormant)
-            continue;
+        if (!voice) continue;
 
         bool isPlaying = (voice->state == VoiceState::VoiceStateState::Playing);
         positions.push_back({ voice->distance, voice->angle, isPlaying });
@@ -261,6 +267,7 @@ void SynthVoice::pushChorusPositionsToUI(){
 
     audioProcessor->setChorusVoicePositions(positions);
 }
+
 
 
 //===============================================================================
@@ -451,7 +458,7 @@ void SynthVoice::updateResonatorProgress(VoiceState& voice) {
 void SynthVoice::updateVoiceSpatialization(VoiceState* voice, float maxDistance, float stereoSpread) {
     float maxDistanceScalar = (maxDistance - minDist) / (15.0f - minDist);
     voice->distance = minDist + voice->distanceScalar * (juce::jmin(maxDistance, 15.0f) - minDist) + (15 * maxDistanceScalar);
-    voice->distance = juce::jlimit(5.0f, 10.0f, voice->distance);
+    voice->distance = juce::jlimit(5.0f, 15.0f, voice->distance);
     voice->angle = getBaseAngle(voice->angleScalar, stereoSpread);
 }
 
@@ -500,6 +507,7 @@ void SynthVoice::initializeChorusVoice(VoiceState* voice, bool resonatorOn){
 //===========================================================================
 
 void SynthVoice::timerCallback() {
+    if (!*apvts->getRawParameterValue("Chorus On")) return;
     //detect if the spatialization parameters have changed since last block
     float currentMaxDistance = *apvts->getRawParameterValue("Chorus Max Distance");
     float currentStereoSpread = *apvts->getRawParameterValue("Chorus Stereo Spread");
@@ -546,13 +554,13 @@ void SynthVoice::timerCallback() {
 
 
 void SynthVoice::updateInternalSpatialization(float maxDistance, float stereoSpread){
+    if (!apvts->getRawParameterValue("Chorus On")) return;
     const int chorusVoiceNumber = (int)*apvts->getRawParameterValue("Chorus Count");
     int count = 0;
     for (int v = 0; v < voices.size() && count < chorusVoiceNumber; v++) {
         auto* voice = voices[v].get();
-        if (!voice || voice->state == VoiceState::VoiceStateState::Dormant) continue;
+        if (!voice) continue;
         updateVoiceSpatialization(voice, maxDistance, stereoSpread);
-        voice->spatializer->updatePosition(voice->distance, voice->angle);
         count++;
     }
 }

@@ -13,12 +13,10 @@
 #include <JuceHeader.h>
 #include "PowerButtonLAF.h"
 #include "ChorusPositionReadout.h"
+#include "helpButton.h"
 
-class BugsoundsAudioProcessor;
+class BugsoundsAudioProcessorBugsoundsAudioProcessor;
 class BugsoundsAudioProcessorEditor;
-
-
-
 
 
 //==============================================================================
@@ -47,6 +45,7 @@ private:
 
     PowerButtonLookAndFeel powerButtonLAF;
     std::unique_ptr<juce::ToggleButton> powerButton;
+    std::unique_ptr<HelpButton>        helpButton;
 
     std::unique_ptr<SliderAttachment> countAttachment;
     std::unique_ptr<SliderAttachment> spreadAttachment;
@@ -88,4 +87,6 @@ private:
 
     RandomizeButtonLookAndFeel randomizeButtonLAF;
     std::unique_ptr<juce::TextButton> randomizeButton;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ChorusKnobRack)
 };

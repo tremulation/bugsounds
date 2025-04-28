@@ -15,7 +15,7 @@ PipSequencer::PipSequencer(BugsoundsAudioProcessor& p) : audioProcessor(p){
     //set up title 
     titleLabel.setFont(juce::Font(16.0f));
     titleLabel.setJustificationType(juce::Justification::left);
-    titleLabel.setText("Pip Sequencer", juce::dontSendNotification);
+    titleLabel.setText("Subclick Sequencer", juce::dontSendNotification);
     addAndMakeVisible(titleLabel);
 
     //set up sequencebox and viewport

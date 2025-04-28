@@ -50,6 +50,10 @@ ChorusKnobRack::ChorusKnobRack(BugsoundsAudioProcessor& processor, BugsoundsAudi
     };
 
     addAndMakeVisible(randomizeButton.get());
+
+    helpButton = std::make_unique<HelpButton>(
+        [this] { audioEditor.toggleHelpCompendium("chorus"); });
+    addAndMakeVisible(helpButton.get());
 }
 
 void ChorusKnobRack::paint(juce::Graphics& g)
@@ -102,7 +106,10 @@ void ChorusKnobRack::resized()
     auto titleBounds = bounds.removeFromTop(titleHeight);
     auto powerButtonBounds = titleBounds.removeFromLeft(titleHeight).reduced(5);
     powerButton->setBounds(powerButtonBounds);
+    auto helpArea = titleBounds.removeFromRight(titleHeight).reduced(5);
+    helpButton->setBounds(helpArea);
     titleLabel.setBounds(titleBounds.reduced(5, 0));
+    
 
     // knob layout
     bounds.removeFromTop(5);

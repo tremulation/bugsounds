@@ -1,0 +1,21 @@
+{
+    "pageTitle": "Click Settings",
+    "content": [
+        {
+            "type": "subheader",
+            "text": "Introduction"
+        },
+        {
+            "type": "text",
+            "content": "Click Settings allows you to edit the properties of individual clicks, as well as song-wide properties. "
+        },
+        {
+            "type": "subheader",
+            "text": "Controls"
+        },
+        {
+            "type": "text",
+            "content": "- Vol: how loud each click is. \n- Time  Rand: how much randomness to inject into click timing\n- Pitch Rand: how much randomness to inject into click pitch\n- A/D  ratio: what percentage of the subclicks are rising, and what percent is falling. For example, an A/D ratio of .2 will mean all subclicks increase to full volume in 20% of their length, and then fall back to 0 volume in the remaining 80%.\nThe next three parameters tie the current volume of a song to the speed at which clicks are being generated. This prevents initial clicks from being unnaturally loud at the start of songs. \n- Min Vol Freq: The click frequency at which the minimum volume is reached. \n- Max Vol Freq: The click frequency at which the maximum volume is reached.\n- Freq Fadeout: the minimum volume (the volume at Min Vol Freq)."
+        }
+    ]
+}

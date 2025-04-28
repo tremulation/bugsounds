@@ -1,9 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="yTOXQh" name="bugsounds" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
+              includeBinaryInJuceHeader="1" binaryDataNamespace="BinData">
   <MAINGROUP id="RIYwew" name="bugsounds">
     <GROUP id="{28D391B9-8AA7-A9B0-B4E4-937980DDCF90}" name="Source">
+      <GROUP id="{4B1E7E85-602F-7445-F196-25C929965A9D}" name="HelpPages">
+        <FILE id="ovYPGB" name="chorusHelp.json" compile="0" resource="1" file="Source/HelpPages/chorusHelp.json"/>
+        <FILE id="aeemDM" name="clickSettingsHelp.json" compile="0" resource="1"
+              file="Source/HelpPages/clickSettingsHelp.json"/>
+        <FILE id="xEBzuU" name="documentation markdown.md" compile="0" resource="1"
+              file="Source/HelpPages/documentation markdown.md"/>
+        <FILE id="Wi2DMK" name="frequencyEditorHelp.json" compile="0" resource="1"
+              file="Source/HelpPages/frequencyEditorHelp.json"/>
+        <FILE id="aPUsLa" name="resonatorEditorHelp.json" compile="0" resource="1"
+              file="Source/HelpPages/resonatorEditorHelp.json"/>
+        <FILE id="v4gl8R" name="resonatorSettingsHelp.json" compile="0" resource="1"
+              file="Source/HelpPages/resonatorSettingsHelp.json"/>
+        <FILE id="qnsAxO" name="subclickSequencerHelp.json" compile="0" resource="1"
+              file="Source/HelpPages/subclickSequencerHelp.json"/>
+      </GROUP>
+      <FILE id="YTsmOp" name="helpButton.h" compile="0" resource="0" file="Source/helpButton.h"/>
+      <FILE id="Yjfsjp" name="HelpCompendium.h" compile="0" resource="0"
+            file="Source/HelpCompendium.h"/>
       <FILE id="Z5td0W" name="SynthVoice.cpp" compile="1" resource="0" file="Source/SynthVoice.cpp"/>
       <FILE id="k0qGOy" name="ChorusPositionReadout.h" compile="0" resource="0"
             file="Source/ChorusPositionReadout.h"/>
@@ -27,8 +46,8 @@
       <FILE id="AvvfOh" name="Evaluator.cpp" compile="1" resource="0" file="Source/Evaluator.cpp"/>
       <FILE id="lYSnOF" name="ResonatorKnobRack.h" compile="0" resource="0"
             file="Source/ResonatorKnobRack.h"/>
-      <FILE id="u8yBVr" name="HelmholtzResonator.h" compile="0" resource="0"
-            file="Source/HelmholtzResonator.h"/>
+      <FILE id="u8yBVr" name="HarmonicResonator.h" compile="0" resource="0"
+            file="Source/HarmonicResonator.h"/>
       <FILE id="Ga6q4m" name="PipSequencer.cpp" compile="1" resource="0"
             file="Source/PipSequencer.cpp"/>
       <FILE id="Mz4ZpC" name="PipSequencer.h" compile="0" resource="0" file="Source/PipSequencer.h"/>

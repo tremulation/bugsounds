@@ -38,6 +38,7 @@ public:
 		panner.prepare(spec);
 
 		//set up distance gains and panning
+		isPrepared = true;
 		updatePosition(distance, angle);
 	}
 
@@ -49,28 +50,33 @@ public:
 		//GAIN: calculate gain based on inverse square law
 		float distanceFactor = minDistance / newDistance;
 		float gainFactor = distanceFactor * distanceFactor;
-		float gainDB = juce::jlimit(-30.0f, 0.0f, juce::Decibels::gainToDecibels(gainFactor));
+		float gainDB = juce::jlimit(-15.0f, -5.0f, juce::Decibels::gainToDecibels(gainFactor));
 		chain.get<0>().setGainDecibels(gainDB);
 
 		//HIGH SHELF FILTER: 
 		//get distance from 0 to 1 for scaling params
 		float normalizedDistance = (newDistance - minDistance) / (maxDistance - minDistance);
+		juce::Logger::writeToLog("the distance is: " + juce::String(normalizedDistance));
 		//higher distance means lower cutoff
 		float cutoffFreq = juce::jmap(normalizedDistance, 10000.0f, 400.0f);
 		//higher distance is more attenuation. 0 dB close, -48 dB far
-		float shelfGainDB = juce::jmap(normalizedDistance, 0.0f, -48.0f);
+		float shelfGainDB = juce::jmap(normalizedDistance, 0.0f, -24.0f);
 		float q = 0.7f;
-		auto highShelfCoefs = juce::dsp::IIR::Coefficients<float>::makeHighShelf(
-			currentSpec.sampleRate, cutoffFreq, q, juce::Decibels::decibelsToGain(shelfGainDB));
-		chain.get<1>().coefficients = highShelfCoefs;
+		auto& filter = chain.get<1>();
+		filter.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighShelf(
+			currentSpec.sampleRate,
+			cutoffFreq,
+			q,
+			juce::Decibels::decibelsToGain(shelfGainDB)
+		);
 
 		//REVERB: 
 		juce::Reverb::Parameters reverbParams;
 		reverbParams.wetLevel = juce::jmap(normalizedDistance, 0.1f, 0.5f);
-		reverbParams.roomSize = juce::jmap(normalizedDistance, 0.4f, 0.8f);
-		reverbParams.damping  = juce::jmap(normalizedDistance, 0.2f, 0.4f);
+		reverbParams.roomSize = 0.5f;
+		reverbParams.damping = 1.0f;
 		reverbParams.dryLevel = 1 - reverbParams.wetLevel;
-		reverbParams.width = 1.0f;
+		reverbParams.width = 0.5f;
 
 		chain.get<2>().setParameters(reverbParams);
 
@@ -135,6 +141,7 @@ public:
 	}
 
 
+	bool isPrepared = false;
 private:
 
 	ProcessChain chain;

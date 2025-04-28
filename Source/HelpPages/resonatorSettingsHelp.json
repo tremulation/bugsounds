@@ -1,0 +1,21 @@
+{
+    "pageTitle": "Resonator Settings",
+    "content": [
+        {
+            "type": "subheader",
+            "text": "Introduction"
+        },
+        {
+            "type": "text",
+            "content": "Some insects posess resonant air cavities, such as cicadas. These cavities change size to resonate at different frequencies with the main song. This synthesizer uses several resonators placed at increasing overtones of the fundamental resonant pitch specified by the resonator editor. \n\nTo use the resonator, first turn it on in Resonator Settings. Once it's on, you can use the Resonator Editor on the left to describe how it will behave throughout the song in the resonator editor. "
+        },
+        {
+            "type": "subheader",
+            "text": "Controls"
+        },
+        {
+            "type": "text",
+            "content": "- Bandwidth: How wide the resonant peaks are. Wider peaks will cause a larger band of frequencies to resonate. \n- Peak Gain: How tall the peaks are, or how much resonance to apply.\n- Overtones: The number of peaks to place.\n- Overtone Decay: how much to decrease the loudness of successive overtones. .5 is no decay, values < .5 cause decay, and values > .5 cause amplification of successive peaks.\n- Original Mix: How much of the original un-resonated signal to include in the output."
+        }
+    ]
+}

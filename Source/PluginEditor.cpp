@@ -30,8 +30,10 @@ BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProce
     addAndMakeVisible(clickSettingsRack);
     addAndMakeVisible(resonatorKnobRack);
 	addAndMakeVisible(chorusKnobRack);
-    setSize(800, 640);
-    
+    setSize(baseWidth, baseHeight);
+
+    addAndMakeVisible(helpCompendium);
+    helpCompendium.setVisible(false);
 }
 
 BugsoundsAudioProcessorEditor::~BugsoundsAudioProcessorEditor()
@@ -53,43 +55,51 @@ void BugsoundsAudioProcessorEditor::resized()
     const int rackHeight = 110;
     const int headerHeight = 40;
 
-    //header bar takes up top section
-	headerBar.setBounds(getLocalBounds().removeFromTop(headerHeight));
+    auto fullArea = getLocalBounds();
 
-    //add consistent padding around all edges
-    auto area = getLocalBounds().withTrimmedTop(headerHeight).reduced(padding);
+    if (helpCompendium.isVisible())
+    {
+        auto helpArea = fullArea.removeFromRight(helpWidth);
+        helpCompendium.setBounds(helpArea);
+    }
+    else
+    {
+        helpCompendium.setBounds(0, 0, 0, 0); // Collapse it completely if hidden
+    }
 
-    //split into left and right sections
+    // Now fullArea is only the main part
+
+    // Header bar at the top
+    headerBar.setBounds(fullArea.removeFromTop(headerHeight));
+
+    // add padding around edges
+    auto area = fullArea.reduced(padding);
+
+    // Split into left and right sections
     auto leftArea = area.removeFromLeft(area.getWidth() * (8.f / 12.f));
-    leftArea.removeFromRight(padding / 2);  
-    area.removeFromLeft(padding / 2);       
+    leftArea.removeFromRight(padding / 2); // tiny extra padding
+    area.removeFromLeft(padding / 2);       // matching padding
 
-    //calculate editor height based on remaining space
     const int editorHeight = (leftArea.getHeight() - pipSequencerHeight - buttonHeight - padding * 2) / 2;
 
-    //left area for ui components that control custom parameters (songcode and pips)
-    auto workingArea = leftArea;
+    // Pip Sequencer
+    pipSequencer.setBounds(leftArea.removeFromTop(pipSequencerHeight));
+    leftArea.removeFromTop(padding);
 
-    //pip sequencer
-    pipSequencer.setBounds(workingArea.removeFromTop(pipSequencerHeight));
-    workingArea.removeFromTop(padding);
+    // Frequency Editor
+    frequencyEditor.setBounds(leftArea.removeFromTop(editorHeight));
+    leftArea.removeFromTop(padding);
 
-    //frequency editor
-    frequencyEditor.setBounds(workingArea.removeFromTop(editorHeight));
-    workingArea.removeFromTop(padding);
+    // Resonator Editor
+    resonatorEditor.setBounds(leftArea.removeFromTop(editorHeight));
+    leftArea.removeFromTop(padding);
 
-    //resonator editor
-    resonatorEditor.setBounds(workingArea.removeFromTop(editorHeight));
-    workingArea.removeFromTop(padding);
+    // Test Button
+    testButton.setBounds(leftArea.removeFromTop(buttonHeight).reduced(padding, 0));
 
-
-    //test button at the bottom with padding on all sides
-    auto buttonArea = workingArea.removeFromTop(buttonHeight);
-    testButton.setBounds(buttonArea.reduced(padding, 0));
-
-    //right area for controls
+    // Right side (controls)
     clickSettingsRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2));
-    resonatorKnobRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2)); //30 is title height
+    resonatorKnobRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2));
     chorusKnobRack.setBounds(area);
 }
 
@@ -139,6 +149,20 @@ resError:
 	audioProcessor.setSongAST(nullptr);
     audioProcessor.setResAST(nullptr);
 	return;
+}
+
+
+void BugsoundsAudioProcessorEditor::toggleHelpCompendium(juce::String pageId) {
+    if (!helpCompendium.isVisible()) {
+        helpCompendium.setVisible(true);
+        helpCompendium.setPage(pageId);
+        setSize(baseWidth + helpWidth, baseHeight);
+    }
+    else {
+        helpCompendium.setVisible(false);
+        helpCompendium.setPage("closed");
+        setSize(baseWidth, baseHeight);
+    }
 }
 
 

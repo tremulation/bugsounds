@@ -18,6 +18,7 @@
 #include "Evaluator.h"
 #include "HeaderBar.h"
 #include "ChorusKnobRack.h"
+#include "HelpCompendium.h"
 
 //==============================================================================
 /**
@@ -34,8 +35,14 @@ public:
 
     void disableResonatorEditor();
     void enableResonatorEditor();
+    void toggleHelpCompendium(juce::String pageId);
 
 private:
+
+    const int baseWidth = 800;
+    const int baseHeight = 640;
+    const int helpWidth = 300;
+
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     BugsoundsAudioProcessor& audioProcessor;
@@ -48,6 +55,7 @@ private:
     ResonatorKnobRack resonatorKnobRack;
 	ChorusKnobRack chorusKnobRack;
     HeaderBar headerBar;
+    HelpCompendium helpCompendium;
 
     void freqCodeEditorHasChanged();
     void resonatorCodeEditorHasChanged();
