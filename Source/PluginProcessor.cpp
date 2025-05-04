@@ -297,7 +297,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
         "Chorus Count",
         "Chorus Count",
         1,
-        10, 
+        20, 
         3));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Chorus Stereo Spread",

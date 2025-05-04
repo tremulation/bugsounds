@@ -12,6 +12,7 @@
 #include <JuceHeader.h>
 
 
+
 //effects object takes raw mono audio and spatializes it into a stereo signal,
 //based on two variables which are set before processing: distance, and angle
 class Spatializer {
@@ -50,13 +51,12 @@ public:
 		//GAIN: calculate gain based on inverse square law
 		float distanceFactor = minDistance / newDistance;
 		float gainFactor = distanceFactor * distanceFactor;
-		float gainDB = juce::jlimit(-15.0f, -5.0f, juce::Decibels::gainToDecibels(gainFactor));
+		float gainDB = juce::jlimit(-5.0f, -0.0f, juce::Decibels::gainToDecibels(gainFactor));
 		chain.get<0>().setGainDecibels(gainDB);
 
 		//HIGH SHELF FILTER: 
 		//get distance from 0 to 1 for scaling params
 		float normalizedDistance = (newDistance - minDistance) / (maxDistance - minDistance);
-		juce::Logger::writeToLog("the distance is: " + juce::String(normalizedDistance));
 		//higher distance means lower cutoff
 		float cutoffFreq = juce::jmap(normalizedDistance, 10000.0f, 400.0f);
 		//higher distance is more attenuation. 0 dB close, -48 dB far
@@ -72,13 +72,13 @@ public:
 
 		//REVERB: 
 		juce::Reverb::Parameters reverbParams;
-		reverbParams.wetLevel = juce::jmap(normalizedDistance, 0.1f, 0.5f);
+		reverbParams.wetLevel = juce::jmap(normalizedDistance, 0.1f, 0.8f);
 		reverbParams.roomSize = 0.5f;
 		reverbParams.damping = 1.0f;
 		reverbParams.dryLevel = 1 - reverbParams.wetLevel;
 		reverbParams.width = 0.5f;
-
 		chain.get<2>().setParameters(reverbParams);
+
 
 		//PANNING: map angle (0 to 2pi) to the panners -1 to 1 range
 		//we only care about x-axis projection since we're working with stereo
