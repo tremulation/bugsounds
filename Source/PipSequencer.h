@@ -9,13 +9,14 @@
 #include <JuceHeader.h>
 #include "PipStructs.h"
 #include "PluginProcessor.h"
-
+#include "helpButton.h"
 
 class PipBar;
 struct PipBarArea;
 class SequenceBox;
 
-
+class BugsoundsAudioProcessorBugsoundsAudioProcessor;
+class BugsoundsAudioProcessorEditor;
 
 const float pipWidth = 40.0f;
 const float pipSpacing = 20.0f;
@@ -159,7 +160,7 @@ private:
 class PipSequencer : public juce::Component, public juce::ChangeListener
 {
 public:
-    PipSequencer(BugsoundsAudioProcessor& p);
+    PipSequencer(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& editor);
     ~PipSequencer() override;
 
     void paint(juce::Graphics&) override;
@@ -186,11 +187,14 @@ private:
     
     juce::TextButton previewButton;
 
+    std::unique_ptr<HelpButton>         helpButton;
+
     std::array<std::unique_ptr<juce::TextButton>, 4> modeButtons;
     void createModeButtons();
     void clearModeButtonStates();
 
     BugsoundsAudioProcessor& audioProcessor;
+    BugsoundsAudioProcessorEditor& audioEditor;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PipSequencer)
 public:

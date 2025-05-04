@@ -9,11 +9,12 @@
 */
 
 #include "songcodeEditor.h"
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
 
 
 
-
-SongcodeEditor::SongcodeEditor(const juce::String& title, BugsoundsAudioProcessor& p) : audioProcessor(p)
+SongcodeEditor::SongcodeEditor(const juce::String& title, const juce::String& helpPage, BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& e) : audioProcessor(p), audioEditor(e)
 {
     //set up title 
     titleLabel.setFont(juce::Font(16.0f));
@@ -59,6 +60,10 @@ SongcodeEditor::SongcodeEditor(const juce::String& title, BugsoundsAudioProcesso
 
     //set up a listener
     audioProcessor.getPresetManager().addChangeListener(this);
+
+    helpButton = std::make_unique<HelpButton>(
+        [this, helpPage] { audioEditor.toggleHelpCompendium(helpPage); });
+    addAndMakeVisible(helpButton.get());
 }
 
 
@@ -103,6 +108,10 @@ void SongcodeEditor::resized()
     auto titleHeight = 30;
     auto titleBounds = bounds.removeFromTop(titleHeight);
     titleLabel.setBounds(titleBounds.reduced(5, 0));
+
+    //add help buton
+    auto helpArea = titleBounds.removeFromRight(titleHeight).reduced(5);
+    helpButton->setBounds(helpArea);
 
     // Position editor and error label
     auto errorLabelBounds = bounds.removeFromBottom(15);

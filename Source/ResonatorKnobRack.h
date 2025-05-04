@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include "PowerButtonLAF.h"
+#include "helpButton.h"
 
 // Forward declarations
 class BugsoundsAudioProcessor;
@@ -41,6 +42,7 @@ private:
 
     PowerButtonLookAndFeel powerButtonLAF;
     std::unique_ptr<juce::ToggleButton> powerButton;
+    std::unique_ptr<HelpButton>         helpButton;
 
     std::unique_ptr<SliderAttachment> overtoneAttachment;
     std::unique_ptr<SliderAttachment> qAttachment;

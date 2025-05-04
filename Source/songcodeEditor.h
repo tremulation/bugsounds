@@ -12,17 +12,20 @@
 
 #include <JuceHeader.h>
 #include "Evaluator.h"
-#include "PluginProcessor.h"
+#include "HelpButton.h"
 
 struct ErrorInfo;
 
+
+class BugsoundsAudioProcessor;
+class BugsoundsAudioProcessorEditor;
 
 class SongcodeEditor : public juce::Component,
                        public juce::TextEditor::Listener,
                        public juce::ChangeListener
 {
     public:
-        SongcodeEditor(const juce::String& title, BugsoundsAudioProcessor& audioProcessor);
+        SongcodeEditor(const juce::String& title, const juce::String& helpPage, BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& e);
         ~SongcodeEditor() override;
 
         void paint(juce::Graphics&) override;
@@ -54,6 +57,8 @@ class SongcodeEditor : public juce::Component,
         juce::LookAndFeel_V4 errorLookAndFeel;
         juce::LookAndFeel_V4* normalLookAndFeel;
 
+        std::unique_ptr<HelpButton>         helpButton;
+
 
         juce::Colour defaultEditorColour;
         juce::Colour defaultBackgroundColour;
@@ -63,6 +68,7 @@ class SongcodeEditor : public juce::Component,
         bool isDisabled;
 
         BugsoundsAudioProcessor& audioProcessor;
+        BugsoundsAudioProcessorEditor& audioEditor;
         juce::String title;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SongcodeEditor)

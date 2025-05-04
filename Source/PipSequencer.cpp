@@ -7,11 +7,11 @@
 */
 
 #include "PipSequencer.h"
-
+#include "PluginEditor.h"
 
 //----------------------------========== Pip Sequencer ==========----------------------------\\
 
-PipSequencer::PipSequencer(BugsoundsAudioProcessor& p) : audioProcessor(p){
+PipSequencer::PipSequencer(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& editor) : audioProcessor(p), audioEditor(editor){
     //set up title 
     titleLabel.setFont(juce::Font(16.0f));
     titleLabel.setJustificationType(juce::Justification::left);
@@ -36,6 +36,10 @@ PipSequencer::PipSequencer(BugsoundsAudioProcessor& p) : audioProcessor(p){
 
     loadPipsFromProcessor();
     audioProcessor.getPresetManager().addChangeListener(this);
+
+    helpButton = std::make_unique<HelpButton>(
+        [this] { audioEditor.toggleHelpCompendium("subclickSequencer"); });
+    addAndMakeVisible(helpButton.get());
 }
 
 
@@ -75,6 +79,10 @@ void PipSequencer::resized() {
     auto titleHeight = 30;
     auto titleBounds = bounds.removeFromTop(titleHeight);
     titleLabel.setBounds(titleBounds.reduced(5, 0));
+
+    //help buton
+    auto helpArea = titleBounds.removeFromRight(titleHeight).reduced(5);
+    helpButton->setBounds(helpArea);
 
     //position preview button to the right of the title
     auto previewButtonWidth = 80;

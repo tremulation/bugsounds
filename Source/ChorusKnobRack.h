@@ -15,7 +15,7 @@
 #include "ChorusPositionReadout.h"
 #include "helpButton.h"
 
-class BugsoundsAudioProcessorBugsoundsAudioProcessor;
+class BugsoundsAudioProcessor;
 class BugsoundsAudioProcessorEditor;
 
 
@@ -45,7 +45,7 @@ private:
 
     PowerButtonLookAndFeel powerButtonLAF;
     std::unique_ptr<juce::ToggleButton> powerButton;
-    std::unique_ptr<HelpButton>        helpButton;
+    std::unique_ptr<HelpButton>         helpButton;
 
     std::unique_ptr<SliderAttachment> countAttachment;
     std::unique_ptr<SliderAttachment> spreadAttachment;

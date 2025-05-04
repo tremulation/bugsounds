@@ -12,6 +12,7 @@
 #include "PluginEditor.h"  
 
 
+
 //==============================================================================
 ResonatorKnobRack::ResonatorKnobRack(BugsoundsAudioProcessor& processor, BugsoundsAudioProcessorEditor& editor)
     : audioProcessor(processor), audioEditor(editor)
@@ -41,6 +42,10 @@ ResonatorKnobRack::ResonatorKnobRack(BugsoundsAudioProcessor& processor, Bugsoun
     powerButton->onClick = [this] {
         disableResonatorEditor();
         };
+
+    helpButton = std::make_unique<HelpButton>(
+        [this] { audioEditor.toggleHelpCompendium("resonatorSettings"); });
+    addAndMakeVisible(helpButton.get());
 }
 
 void ResonatorKnobRack::paint(juce::Graphics& g)
@@ -91,13 +96,15 @@ void ResonatorKnobRack::resized()
     const int margin = 5;
     auto bounds = getLocalBounds().reduced(margin);
 
-    // --- Title row with power button ---
+    // --- Title row with power and help buttons---
     auto titleHeight = 30;
     auto titleBounds = bounds.removeFromTop(titleHeight);
 
-    // Position power button on the far left
+    // Position buttons
     auto powerButtonBounds = titleBounds.removeFromLeft(titleHeight).reduced(5);
     powerButton->setBounds(powerButtonBounds);
+    auto helpArea = titleBounds.removeFromRight(titleHeight).reduced(5);
+    helpButton->setBounds(helpArea);
 
     // Position title next to power button
     titleLabel.setBounds(titleBounds.reduced(5, 0));
