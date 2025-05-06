@@ -11,9 +11,8 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "PowerButtonLAF.h"
 #include "ChorusPositionReadout.h"
-#include "helpButton.h"
+#include "ButtonsAndStuff.h"
 
 class BugsoundsAudioProcessor;
 class BugsoundsAudioProcessorEditor;

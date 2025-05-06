@@ -267,19 +267,19 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
         0.10f  // Default to 1/4 rise, 3/4 fall
     ));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "Click Low Frequency Attenuation",
-        "Click Low Frequency Attenuation",
-        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
+        "Click Start Fadeout",
+        "Click Start Fadeout",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.05f, 1.0f),
         1.0f));
 	layout.add(std::make_unique<juce::AudioParameterFloat>(
-		"Click Max Volume Frequency",
-		"Click Max Volume Frequency",
+		"Click Floor Frequency",
+		"Click Floor Frequency",
 		juce::NormalisableRange<float>(0.0f, 1000.0f, 1.f, 1.0f),
 		100.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "Click Min Volume Frequency",
-        "Click Min Volume Frequency",
-        juce::NormalisableRange<float>(0.0f, 1000.0f, 1.f, 1.0f),
+        "Click Start Jitter",
+        "Click Start Jitter",
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.05f, 1.0f),
         0.0f));
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Click Volume",

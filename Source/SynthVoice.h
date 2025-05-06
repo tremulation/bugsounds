@@ -133,8 +133,9 @@ public:
     void pushChorusPositionsToUI();
 
 private:
-    //================================= helper functions ===============================================
-    void processFirstLayerClicks(VoiceState& voice, double sampleRate, float timingRandomParam);
+    //================================= helper functions ==============================================
+    void processFirstLayerClicks(VoiceState& voice, double sampleRate, float timingRandomParam,
+        const float floorFreq, const float startJitter, const float startFadeout);
     void processSecondLayerClicks(VoiceState& voice);
     float generateAudioOutput(VoiceState& voice, float clickVolumeParam);
     void updateSongProgress(VoiceState& voice);

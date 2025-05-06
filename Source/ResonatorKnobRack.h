@@ -1,8 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "PowerButtonLAF.h"
-#include "helpButton.h"
+#include "ButtonsAndStuff.h"
 
 // Forward declarations
 class BugsoundsAudioProcessor;

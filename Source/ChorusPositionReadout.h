@@ -87,7 +87,7 @@ private:
             for (auto& pos : currentPositions) {
                 if (pos.isPlaying) {
                     float normD = (pos.distance) / (15.0f - 5.0f);
-                    float maxR = bounds.getWidth() * 0.5f - 10.0f;
+                    float maxR = bounds.getWidth()/2 - 15.0f;
                     float r0 = normD * maxR;
                     float x = center.x + std::cos(pos.angle) * r0;
                     float y = center.y + std::sin(pos.angle) * r0;

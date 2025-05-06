@@ -11,7 +11,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "helpButton.h"
+#include "ButtonsAndStuff.h"
 
 class BugsoundsAudioProcessor;
 class BugsoundsAudioProcessorEditor;
@@ -28,8 +28,8 @@ private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
 
     const int margin = 5;
-    juce::Slider clickTimingKnob, clickPitchKnob, adRatioKnob, lowFreqAttenuationKnob, minVolFreqKnob, maxVolFreqKnob;
-    juce::Label titleLabel, timingLabel, pitchLabel, adRatioLabel, lowFreqAttenuationLabel, minVolFreqLabel, maxVolFreqLabel;
+    juce::Slider clickTimingKnob, clickPitchKnob, adRatioKnob, startFadeoutknob, startJitterKnob, floorFreqKnob;
+    juce::Label titleLabel, timingLabel, pitchLabel, adRatioLabel, startFadeoutLabel, startJitterLabel, floorFreqLabel;
     std::unique_ptr<SliderAttachment> timingAttachment;
     std::unique_ptr<SliderAttachment> pitchAttachment;
     std::unique_ptr<SliderAttachment> adRatioAttachment;

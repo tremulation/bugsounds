@@ -13,7 +13,7 @@
 //==============================================================================
 BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p, *this), frequencyEditor("Frequency Editor", "frequencyEditor", p, *this),
-	resonatorEditor("Resonator Editor", "resonatorEditor", p, *this), resonatorKnobRack(p, *this), headerBar(p), pipSequencer(p, *this), chorusKnobRack(p, *this)
+	resonatorEditor("Resonator Editor", "resonatorEditor", p, *this), resonatorKnobRack(p, *this), headerBar(p, *this), pipSequencer(p, *this), chorusKnobRack(p, *this)
 {
     addAndMakeVisible(headerBar);
 

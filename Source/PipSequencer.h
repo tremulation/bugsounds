@@ -9,7 +9,7 @@
 #include <JuceHeader.h>
 #include "PipStructs.h"
 #include "PluginProcessor.h"
-#include "helpButton.h"
+#include "ButtonsAndStuff.h"
 
 class PipBar;
 struct PipBarArea;

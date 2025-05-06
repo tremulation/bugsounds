@@ -12,7 +12,7 @@
 
 #include <JuceHeader.h>
 #include "Evaluator.h"
-#include "HelpButton.h"
+#include "ButtonsAndStuff.h"
 
 struct ErrorInfo;
 

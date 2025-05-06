@@ -108,7 +108,27 @@ public:
         freqSong = fs;
         resSong = rs;
         setPips(pipi);
+
+        //precompile on preset load
+        ErrorInfo errorInfo = {};
+        std::map<std::string, float> env;
+        std::vector<SongElement> songElements;
+
+        //compile check freq songcode
+        juce::ReferenceCountedObjectPtr<ScriptNode> parsedSong = generateAST(freqSong.toStdString(), &errorInfo);
+        if (errorInfo.message != "") return;
+        songElements = evaluateAST(parsedSong, &errorInfo, &env);
+        if (errorInfo.message != "") return;
+
+        if (*apvts.getRawParameterValue("Resonator On")) {
+            juce::ReferenceCountedObjectPtr<ScriptNode> parsedResSong = generateAST(resSong.toStdString(), &errorInfo);
+            if (errorInfo.message != "") return;
+            setResAST(parsedResSong);
+        }
+        setSongAST(parsedSong);
     }
+
+
 
 
     //for updating the chorus position readout in chorusKnobRack

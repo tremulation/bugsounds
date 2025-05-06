@@ -10,9 +10,6 @@
         <FILE id="qHWdwo" name="bglogo2.png" compile="0" resource="1" file="Source/Graphics/bglogo2.png"/>
         <FILE id="NgbIOO" name="bglogo3.png" compile="0" resource="1" file="Source/Graphics/bglogo3.png"/>
       </GROUP>
-      <FILE id="CrZ2Xl" name="HeaderBar.cpp" compile="1" resource="0" file="Source/HeaderBar.cpp"/>
-      <FILE id="uScCVJ" name="ClickSettingsKnobRack.cpp" compile="1" resource="0"
-            file="Source/ClickSettingsKnobRack.cpp"/>
       <GROUP id="{4B1E7E85-602F-7445-F196-25C929965A9D}" name="HelpPages">
         <FILE id="MrlXAJ" name="bugSoundsHelp.json" compile="0" resource="1"
               file="Source/HelpPages/bugSoundsHelp.json"/>
@@ -30,15 +27,17 @@
         <FILE id="qnsAxO" name="subclickSequencerHelp.json" compile="0" resource="1"
               file="Source/HelpPages/subclickSequencerHelp.json"/>
       </GROUP>
-      <FILE id="YTsmOp" name="helpButton.h" compile="0" resource="0" file="Source/helpButton.h"/>
+      <FILE id="uScCVJ" name="ClickSettingsKnobRack.cpp" compile="1" resource="0"
+            file="Source/ClickSettingsKnobRack.cpp"/>
+      <FILE id="CrZ2Xl" name="HeaderBar.cpp" compile="1" resource="0" file="Source/HeaderBar.cpp"/>
+      <FILE id="qiwrIb" name="ButtonsAndStuff.h" compile="0" resource="0"
+            file="Source/ButtonsAndStuff.h"/>
       <FILE id="Yjfsjp" name="HelpCompendium.h" compile="0" resource="0"
             file="Source/HelpCompendium.h"/>
       <FILE id="Z5td0W" name="SynthVoice.cpp" compile="1" resource="0" file="Source/SynthVoice.cpp"/>
       <FILE id="k0qGOy" name="ChorusPositionReadout.h" compile="0" resource="0"
             file="Source/ChorusPositionReadout.h"/>
       <FILE id="FCRkjM" name="Spatializer.h" compile="0" resource="0" file="Source/Spatializer.h"/>
-      <FILE id="AuYBhT" name="powerButtonLAF.h" compile="0" resource="0"
-            file="Source/powerButtonLAF.h"/>
       <FILE id="BO6pT8" name="ChorusKnobRack.cpp" compile="1" resource="0"
             file="Source/ChorusKnobRack.cpp"/>
       <FILE id="cYNt8B" name="ChorusKnobRack.h" compile="0" resource="0"

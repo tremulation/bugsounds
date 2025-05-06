@@ -95,9 +95,13 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
 
     const auto sampleRate = getSampleRate();
     const float timingRandomParam = *apvts->getRawParameterValue("Click Timing Random");
-    const float clickVolumeParam = *apvts->getRawParameterValue("Click Volume");
-    const int numChannels = outputBuffer.getNumChannels();
+    const float clickVolumeParam  = *apvts->getRawParameterValue("Click Volume");
+    const int numChannels  = outputBuffer.getNumChannels();
     const bool resonatorOn = *apvts->getRawParameterValue("Resonator On");
+
+    const float floorFreq    = *apvts->getRawParameterValue("Click Floor Frequency");
+    const float startJitter  = *apvts->getRawParameterValue("Click Start Jitter");
+    const float startFadeout = *apvts->getRawParameterValue("Click Start Fadeout");
 
     if (resonatorOn) loadResonatorParams();
 
@@ -140,7 +144,7 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
         else offCooldownVoices++;
 
         for (int sampleIdx = 0; sampleIdx < numSamples; ++sampleIdx) {
-            processFirstLayerClicks(*voice, sampleRate, timingRandomParam);
+            processFirstLayerClicks(*voice, sampleRate, timingRandomParam, floorFreq, startJitter, startFadeout);
             processSecondLayerClicks(*voice);
             float voiceOutput = generateAudioOutput(*voice, clickVolumeParam); //resonator handled in this function
             updateSongProgress(*voice);  //also handles switch ending song/switching from playing to cooldown
@@ -275,7 +279,11 @@ void SynthVoice::pushChorusPositionsToUI(){
 
 //handles generating clicks from the provided song
     //also manages patterns and randomness
-void SynthVoice::processFirstLayerClicks(VoiceState& voice, double sampleRate, float /*timingRandomParam*/) {
+
+//processFirstLayerClicks(*voice, sampleRate, timingRandomParam, floorFreq, startJitter, startFadeout);
+void SynthVoice::processFirstLayerClicks(VoiceState & voice, double sampleRate, float timingRandomParam,
+    const float floorFreq, const float startJitter, const float startFadeout)
+{
     const double threshold = (1.0f / voice.patternPhaseDivisor) + voice.timingOffset;
 
     if (voice.phase >= threshold) { //GENERATE A CLICK
@@ -297,8 +305,31 @@ void SynthVoice::processFirstLayerClicks(VoiceState& voice, double sampleRate, f
             voice.patternPhaseDivisor = patternValue == 0 ? 1 : patternValue;
         }
 
-        //calculate new timing offset with randomness
-        const float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax;
+
+        //handle starting fadeout and jitter
+        const float currentFrequency = voice.phaseDelta * sampleRate;
+        const float freqStartRatio = 1.0f - (currentFrequency / floorFreq);
+
+        //calculate new timing offset.
+        float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax;
+        float offsetScalar = timingRandomParam; //0 to 1
+        float fadeScalar = 1.0f;
+        //handle start jitter
+        if (currentFrequency < floorFreq && floorFreq > 0) {
+            offsetScalar = freqStartRatio * startJitter;
+            offsetScalar = juce::jmax<float>(offsetScalar, timingRandomParam);
+        }
+        voice.timingOffset = (randomOffset * offsetScalar) * (1.0f / voice.patternPhaseDivisor);
+
+        //handle perceptual fadeout in dB
+        if (floorFreq > 0.0f) {
+            float freqRatio = juce::jlimit(0.0f, currentFrequency / floorFreq, 1.0f);
+            float maxFadeDb = startFadeout * -60.0f;
+            float dbLevel = juce::jmap(freqRatio, maxFadeDb, 0.0f);
+            fadeScalar = juce::Decibels::decibelsToGain(dbLevel);
+        }
+
+        voice.activeClicks.back().vol = fadeScalar;
     }
 
     //update core playback state
