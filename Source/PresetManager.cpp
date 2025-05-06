@@ -128,6 +128,9 @@ void PresetManager::deletePreset(const juce::String& presetName) {
 	if (presetName.isEmpty()) {
 		return;
 	}
+	if (presetName == "Default") {
+		return;
+	}
 
 	const auto presetFile = defaultDir.getChildFile(presetName + "." + extension);
 	if (!presetFile.existsAsFile()) {

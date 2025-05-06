@@ -34,6 +34,10 @@ BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProce
 
     addAndMakeVisible(helpCompendium);
     helpCompendium.setVisible(false);
+    helpCompendium.onClose = [this]() {
+        setSize(baseWidth, baseHeight);
+        resized();
+    };
 }
 
 BugsoundsAudioProcessorEditor::~BugsoundsAudioProcessorEditor()
@@ -153,15 +157,22 @@ resError:
 
 
 void BugsoundsAudioProcessorEditor::toggleHelpCompendium(juce::String pageId) {
-    if (!helpCompendium.isVisible()) {
+    DBG("Page name:" + helpCompendium.getPageID());
+    if (helpCompendium.isVisible()) {
+        if (helpCompendium.getPageID() == pageId) {
+            helpCompendium.closeCompendium();
+            helpCompendium.setVisible(false);
+            
+        }
+        else {
+            helpCompendium.setPage(pageId);
+        }
+    }
+    else {
         helpCompendium.setVisible(true);
         helpCompendium.setPage(pageId);
         setSize(baseWidth + helpWidth, baseHeight);
-    }
-    else {
-        helpCompendium.setVisible(false);
-        helpCompendium.setPage("closed");
-        setSize(baseWidth, baseHeight);
+        resized();
     }
 }
 

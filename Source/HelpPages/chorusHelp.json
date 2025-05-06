@@ -7,7 +7,7 @@
         },
         {
             "type": "text",
-            "content": "Chorus mode simulates standing in the middle of a swarm of insects. It takes the song described by the rest of the UI, and plays it dynamically through a swarm of individual insects. \n\nTo play in chorus mode, activate it by pressing the power button to the left of \"Chorus Mode\" and then press and hold any midi note. As you hold the note, voices will interactively start and stop songs until the note is released. when the note is released, voices will stop coming off cooldown, allowing playing voices to finish.\n\nAll parameters, including those from the Subclick Sequencer, can be changed during playback."
+            "content": "Chorus mode simulates standing in the middle of a swarm of insects. It takes the song described by the rest of the UI, and plays it dynamically through a swarm of individually-simulated insects. \n\nActivate it by pressing the power button to the left of \"Chorus Mode\" and then press and hold any midi note. As you hold the note, voices will interactively start and stop songs until the note is released. when the note is released, voices will stop coming off cooldown, allowing playing voices to finish.\n\nAll parameters, including those from the Subclick Sequencer, can be changed during playback."
         },
         {
             "type": "subheader",
@@ -15,7 +15,7 @@
         },
         {
             "type": "text",
-            "content": "- Count: The number of voices in the swarm. 1 to 10. \n- Randomize Button: The 'R' button to the right of the position display. Randomizes voice positions. \n- Spread: the stereo width of the swarm. \n- Distance: How far voices are from the listener.\n- Cooldown: Cooldowns are generated randomly, and this value specifies the max possible cooldown. 0 to 24 seconds.\n- Correlation: Controls how individual voices decide when to come off cooldown. from -1 to 1.\n\t    * -1 : voices alternate\n\t    * 0  : voices wait their random cooldown\n\t    * 1  : voices try to synchronize\n\tvalues between -1 and 1 blend these behaviors."
+            "content": "Count: The number of voices in the swarm. 1 to 10. \nRandomize Button: The 'R' button to the right of the position display. Randomizes voice positions. \nSpread: the stereo width of the swarm. \nDistance: How far voices are from the listener.\nCooldown: Cooldowns are generated randomly, and this value specifies the max possible cooldown. 0 to 24 seconds.\nCorrelation: Controls how individual voices decide when to come off cooldown. from -1 to 1.\n\t    * -1 : voices alternate\n\t    * 0  : voices wait their random cooldown\n\t    * 1  : voices try to synchronize\n\tvalues between -1 and 1 blend these behaviors."
         }
     ]
 }

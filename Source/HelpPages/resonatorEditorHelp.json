@@ -7,7 +7,7 @@
         },
         {
             "type": "text",
-            "content": "Whereas the Frequency editor holds clickCode that describes the way that the frequency of click generation changes, the resonator editor holds code to describe the way the resonant pitch changes. \n\nThe frequency editor is compiled first, and then the resonator editor is. Variables created in the frequency editor are shared with the resonator, for synchronization purposes. \n\nthe resonator editor shares all syntax with the frequency editor, however pattern elements are ignored."
+            "content": "Whereas the Frequency editor holds clickCode that describes the way that the frequency of click generation changes, the resonator editor holds code to describe the way the resonant pitch changes. \n\nThe frequency editor is compiled first, and then the resonator editor is. Variables created in the frequency editor are shared with the resonator, for synchronization purposes. \n\nThe resonator editor shares all syntax with the frequency editor, however pattern elements are ignored."
         }
     ]
 }

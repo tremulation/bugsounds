@@ -11,6 +11,46 @@
 #pragma once
 #include <JuceHeader.h>
 #include <BinaryData.h>
+#include <functional>
+
+
+class HelpCloseButton : public juce::TextButton {
+public:
+    HelpCloseButton() : juce::TextButton("X") {
+        setLookAndFeel(&lnf);
+        setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    }
+
+    ~HelpCloseButton() {
+        setLookAndFeel(nullptr);
+    }
+
+private:
+    struct ButtonLookAndFeel : public juce::LookAndFeel_V4 {
+        void drawButtonBackground(juce::Graphics& g, juce::Button& b,
+            const juce::Colour&, bool, bool) override {
+            auto bounds = b.getLocalBounds().toFloat().reduced(1);
+            g.setColour(b.isOver() ? juce::Colours::green : juce::Colours::darkgrey);
+            g.fillRoundedRectangle(bounds, 4.0f);
+            g.setColour(juce::Colours::white.withAlpha(0.8f));
+            g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+        }
+
+        void drawButtonText(juce::Graphics& g, juce::TextButton& b,
+            bool, bool) override {
+            g.setColour(juce::Colours::white);
+            g.setFont(juce::Font(18.0f, juce::Font::bold));
+            g.drawText(b.getButtonText(), b.getLocalBounds(),
+                juce::Justification::centred);
+        }
+    };
+
+    ButtonLookAndFeel lnf;
+};
+
+
+
+
 
 class HelpCompendium : public juce::Component {
 public:
@@ -19,6 +59,12 @@ public:
         addAndMakeVisible(viewport);
         viewport.setViewedComponent(&contentComponent);
         viewport.setScrollBarsShown(true, false);
+
+        closeButton = std::make_unique<HelpCloseButton>();
+        closeButton->onClick = [this] {
+            closeCompendium();
+            };
+        addAndMakeVisible(closeButton.get());
     }
 
 
@@ -29,6 +75,14 @@ public:
         juce::Image image;
     };
 
+
+    void closeCompendium() {
+        setVisible(false);
+        if (onClose != nullptr) onClose();
+        currentPageName = "closed";
+        currentPageID = "closed";
+        pageContent.clear();
+    }
 
 
     void paint(juce::Graphics& g) override {
@@ -67,7 +121,8 @@ public:
 
     void resized() override {
         auto bounds = getLocalBounds().reduced(10);
-        bounds.removeFromTop(30); // Account for header height
+        auto headerBounds = bounds.removeFromTop(30); // Account for header height
+        closeButton->setBounds(headerBounds.removeFromRight(30).reduced(5));
         viewport.setBounds(bounds);
 
         // Sync content width with viewport
@@ -75,15 +130,25 @@ public:
     }
 
     void setPage(const juce::String& pageID) {
+        currentPageID = pageID;
         currentPageName = pageID;
         pageContent.clear();
         loadPageContent(pageID);
         contentComponent.setContent(pageContent);
         viewport.setViewPosition(0, 0);
+        repaint();
+        resized();
     }
+
+    juce::String getPageID() {
+        return currentPageID;
+    }
+
+    std::function<void()> onClose;
 
 private:
     juce::String currentPageName = "closed";
+    juce::String currentPageID = "closed";
     juce::Viewport viewport;
 
     struct ContentComponent : public juce::Component
@@ -198,12 +263,10 @@ private:
             setSize(getWidth(), totalH);
         }
     } contentComponent;
-
-
-
-
-
     std::vector<ContentElement> pageContent;
+
+    std::unique_ptr<HelpCloseButton> closeButton;
+    
 
     void loadPageContent(const juce::String& pageID) {
         const juce::String resourceName = pageID + "Help_json";

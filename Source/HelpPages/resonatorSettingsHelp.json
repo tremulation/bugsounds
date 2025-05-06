@@ -15,7 +15,7 @@
         },
         {
             "type": "text",
-            "content": "- Bandwidth: How wide the resonant peaks are. Wider peaks will cause a larger band of frequencies to resonate. \n- Peak Gain: How tall the peaks are, or how much resonance to apply.\n- Overtones: The number of peaks to place.\n- Overtone Decay: how much to decrease the loudness of successive overtones. .5 is no decay, values < .5 cause decay, and values > .5 cause amplification of successive peaks.\n- Original Mix: How much of the original un-resonated signal to include in the output."
+            "content": "Bandwidth: How wide the resonant peaks are. Wider peaks will cause a larger band of frequencies to resonate. \nPeak Gain: How tall the peaks are, or how much resonance to apply.\nOvertones: The number of peaks to place.\nOvertone Decay: how much to decrease the loudness of successive overtones. .5 is no decay, values < .5 cause decay, and values > .5 cause amplification of successive peaks.\nOriginal Mix: How much of the original un-resonated signal to include in the output."
         }
     ]
 }

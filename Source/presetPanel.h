@@ -11,11 +11,12 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "PresetManager.h"
 
 class PresetPanel : public juce::Component, juce::Button::Listener, juce::ComboBox::Listener
 {
 public:
-    PresetPanel(PresetManager& pm) : presetManager(pm) {
+    explicit PresetPanel(PresetManager& pm) : presetManager(pm) {
 		configureButton(saveButton, "Save");
 		configureButton(deleteButton, "Delete");
 		configureButton(previousPresetButton, "<");

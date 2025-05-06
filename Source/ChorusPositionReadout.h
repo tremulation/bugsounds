@@ -55,7 +55,7 @@ public:
             const float maxDistance = 15.0f; 
             float normalizedDistance = distance / (maxDistance - minDistance);
 
-            float maxRadius = bounds.getWidth() / 2 - 10;
+            float maxRadius = bounds.getWidth() / 2 - 15;
             float radius = normalizedDistance * maxRadius;
 
             float x = center.x + std::cos(angle) * radius;
