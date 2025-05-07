@@ -288,9 +288,31 @@ void SynthVoice::processFirstLayerClicks(VoiceState & voice, double sampleRate, 
 
     if (voice.phase >= threshold) { //GENERATE A CLICK
         //only generate a click if the pattern element is non-zero
+        Click* newClick = nullptr;
         if (voice.beatPattern[voice.patternIndex] != 0) {
-            const float baseFrequency = voice.phaseDelta * sampleRate;
-            startNewClick(voice, baseFrequency);
+            //handle starting fadeout and jitter
+            const float currentFrequency = voice.phaseDelta * sampleRate;
+            const float freqStartRatio = 1.0f - (currentFrequency / floorFreq);
+
+            //calculate new timing offset.
+            float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax;
+            float offsetScalar = timingRandomParam; //0 to 1
+            float fadeScalar = 1.0f;
+            //handle start jitter
+            if (currentFrequency < floorFreq && floorFreq > 0) {
+                offsetScalar = freqStartRatio * startJitter;
+                offsetScalar = juce::jmax<float>(offsetScalar, timingRandomParam);
+            }
+            voice.timingOffset = (randomOffset * offsetScalar) * (1.0f / voice.patternPhaseDivisor);
+
+            //handle start fadeout in dB
+            if (floorFreq > 0.0f) {
+                float freqRatio = juce::jlimit(0.0f, currentFrequency / floorFreq, 1.0f);
+                float maxFadeDb = startFadeout * -60.0f;
+                float dbLevel = juce::jmap(freqRatio, maxFadeDb, 0.0f);
+                fadeScalar = juce::Decibels::decibelsToGain(dbLevel);
+            }
+            newClick = startNewClick(voice, currentFrequency, fadeScalar);
         }
 
         voice.phase = 0.0f;
@@ -306,30 +328,6 @@ void SynthVoice::processFirstLayerClicks(VoiceState & voice, double sampleRate, 
         }
 
 
-        //handle starting fadeout and jitter
-        const float currentFrequency = voice.phaseDelta * sampleRate;
-        const float freqStartRatio = 1.0f - (currentFrequency / floorFreq);
-
-        //calculate new timing offset.
-        float randomOffset = (rng.nextFloat() * timingOffsetMax * 2) - timingOffsetMax;
-        float offsetScalar = timingRandomParam; //0 to 1
-        float fadeScalar = 1.0f;
-        //handle start jitter
-        if (currentFrequency < floorFreq && floorFreq > 0) {
-            offsetScalar = freqStartRatio * startJitter;
-            offsetScalar = juce::jmax<float>(offsetScalar, timingRandomParam);
-        }
-        voice.timingOffset = (randomOffset * offsetScalar) * (1.0f / voice.patternPhaseDivisor);
-
-        //handle perceptual fadeout in dB
-        if (floorFreq > 0.0f) {
-            float freqRatio = juce::jlimit(0.0f, currentFrequency / floorFreq, 1.0f);
-            float maxFadeDb = startFadeout * -60.0f;
-            float dbLevel = juce::jmap(freqRatio, maxFadeDb, 0.0f);
-            fadeScalar = juce::Decibels::decibelsToGain(dbLevel);
-        }
-
-        voice.activeClicks.back().vol = fadeScalar;
     }
 
     //update core playback state
@@ -524,6 +522,7 @@ void SynthVoice::initializeChorusVoice(VoiceState* voice, bool resonatorOn){
     std::vector<SongElement> mainSong = evaluateAST(compiledSongScript, &error, &sharedEnv);
     std::vector<SongElement> resSong = {};
     if (resonatorOn) resSong = evaluateAST(compiledResonatorScript, &error, &sharedEnv);
+    voice->resonatorEnabled = resonatorOn;
 
     if (mainSong.empty()) {
         clearCurrentNote();
@@ -710,6 +709,11 @@ void SynthVoice::initializeVoiceState(VoiceState* voice, float vel,
         if (!resSong.empty()) {
             setupNextResNote(*voice, resSong[0]);
         }
+        else {
+            //empty res song, disgregard
+            voice->resonatorEnabled = false;
+            voice->resSong.clear();
+        }
     }
 }
 
@@ -775,11 +779,12 @@ void SynthVoice::setupNextNote(VoiceState& voice, const SongElement& note) {
 //===========================================================================
 
 
-void SynthVoice::startNewClick(VoiceState& voice, float clickGenerationFreq) {
+SynthVoice::Click* SynthVoice::startNewClick(VoiceState& voice, float clickGenerationFreq, float vol) {
     Click newClick = {};
     //create first subclick
     struct Pip firstPip = pipSequence[0];
-    startNewSubClick(voice, firstPip.frequency, firstPip.length, firstPip.level);
+    newClick.vol = vol;
+    startNewSubClick(voice, firstPip.frequency, firstPip.length, firstPip.level * newClick.vol);
 
     //now set up the click state
     newClick.pos = 1;   //already started first pip, go to second
@@ -787,9 +792,9 @@ void SynthVoice::startNewClick(VoiceState& voice, float clickGenerationFreq) {
     if (newClick.samplesTilNextClick <= 0) {
         newClick.samplesTilNextClick = 1;
     }
-    newClick.vol = 1.0;
 
     voice.activeClicks.push_back(newClick);
+    return &voice.activeClicks.back();
 }
 
 

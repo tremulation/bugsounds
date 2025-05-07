@@ -149,7 +149,7 @@ private:
         bool resonatorEnabled);
     void setupNextResNote(VoiceState& voice, const SongElement& note);
     void setupNextNote(VoiceState& voice, const SongElement& note);
-    void startNewClick(VoiceState& voice, float clickGenerationFreq);
+    Click* startNewClick(VoiceState& voice, float clickGenerationFreq, float vol);
     void startNewSubClick(VoiceState& voice, float baseFreq, int samples, float vol);
     void updateVoiceSpatialization(VoiceState* voice, float maxDistance, float stereoSpread);
     void initializeChorusVoice(VoiceState* voice, bool resonatorOn);
