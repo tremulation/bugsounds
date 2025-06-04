@@ -11,27 +11,26 @@
 
 //==============================================================================
 BugsoundsAudioProcessor::BugsoundsAudioProcessor()
-#ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-	 ) 
-#endif
+     : AudioProcessor (BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true))
 {
     presetManager = std::make_unique<PresetManager>(apvts, freqSong, resSong, pips, *this);
     clickPreviewer = std::make_unique<ClickPreviewer>(apvts);
-    mySynth.clearVoices();
-    myVoice = new SynthVoice();
-    mySynth.addVoice(myVoice);
-    myVoice->setAPVTS(&apvts);
-    myVoice->setOwner(*this);
-    myVoice->beginPeriodicChorusUpdates();
-    mySynth.clearSounds();
-    mySynth.addSound(new SynthSound());
+
+    //initialize chorus synth (handles mono and chorus mode)
+    chorusSynth.clearVoices();
+    chorusVoice = new SynthVoice();
+    chorusSynth.addVoice(chorusVoice);
+    chorusVoice->setAPVTS(&apvts);
+    chorusVoice->setOwner(*this);
+    chorusVoice->beginPeriodicChorusUpdates();
+    chorusSynth.clearSounds();
+    chorusSynth.addSound(new SynthSound());
+
+    //initialize piano synth (handles normal synthesizer playback)
+    pianoSynth.clearVoices();
+    for (int i = 0; i < synthPolyphony; i++) {
+        /*pianoSynth.addVoice(new PianoModeVoice());*/
+    }
 
     if (presetManager != nullptr) presetManager->loadPreset("Default");
 }
@@ -109,11 +108,16 @@ void BugsoundsAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     // initialisation that you need..
     juce::ignoreUnused(samplesPerBlock);    //clears out unused samples from last key press
     lastSampleRate = sampleRate;
-    mySynth.setCurrentPlaybackSampleRate(lastSampleRate);
+    chorusSynth.setCurrentPlaybackSampleRate(lastSampleRate);
 
     if (clickPreviewer != nullptr) {
         clickPreviewer->prepareToPlay(samplesPerBlock, sampleRate);
     }
+
+    rmsLevelLeft.reset(sampleRate, 0.5);
+    rmsLevelRight.reset(sampleRate, 0.5);
+    rmsLevelLeft.setCurrentAndTargetValue(-100.f);
+    rmsLevelRight.setCurrentAndTargetValue(-100.f);
 }
 
 void BugsoundsAudioProcessor::releaseResources()
@@ -160,7 +164,7 @@ void BugsoundsAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
         buffer.clear (i, 0, buffer.getNumSamples());
 
     //render main synth player output
-    mySynth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+    chorusSynth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 
     //render previewer output into a temporary buffer
     juce::AudioBuffer<float> previewBuffer(buffer.getNumChannels(), buffer.getNumSamples());
@@ -172,6 +176,25 @@ void BugsoundsAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
         buffer.addFrom(channel, 0, previewBuffer, channel, 0, buffer.getNumSamples());
     }
+
+    //FINAL STEP: apply gain to both stereo channels
+    float levelGain = *apvts.getRawParameterValue("Click Volume");
+    levelGain = Decibels::decibelsToGain(levelGain);
+    buffer.applyGain(levelGain);
+
+    //calculate RMS's for level meter
+    rmsLevelLeft.skip(buffer.getNumSamples());
+    auto val = buffer.getRMSLevel(0, 0, buffer.getNumSamples());
+    val = Decibels::gainToDecibels(val);
+    if (val < rmsLevelLeft.getCurrentValue()) rmsLevelLeft.setTargetValue(val);
+    else rmsLevelLeft.setCurrentAndTargetValue(val);
+
+    rmsLevelRight.skip(buffer.getNumSamples());
+    val = buffer.getRMSLevel(1, 0, buffer.getNumSamples());
+    val = Decibels::gainToDecibels(val);
+    if (val < rmsLevelRight.getCurrentValue()) rmsLevelRight.setTargetValue(val);
+    else rmsLevelRight.setCurrentAndTargetValue(val);
+
 }
 
 //==============================================================================
@@ -251,13 +274,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Click Timing Random",
         "Timing Randomness",
-        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.001f, 1.0f),
         0.0f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Click Pitch Random",
         "Pitch Randomness",
-        juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f, 1.0f),
+        juce::NormalisableRange<float>(0.0f, 1.0f, 0.001f, 1.0f),
         0.0f));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
@@ -284,7 +307,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout BugsoundsAudioProcessor::cre
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "Click Volume",
         "Click Volume",
-        juce::NormalisableRange<float>(-60.0f, 0.0f, 0.1f),
+        juce::NormalisableRange<float>(-60.0f, 6.0f, 0.1f),
         -6.0f  
     ));
 
@@ -334,7 +357,6 @@ const juce::String& BugsoundsAudioProcessor::getUserSongcode(const juce::String&
 }
 
 void BugsoundsAudioProcessor::setUserSongcode(const juce::String& songcode, const juce::String& editorTitle){
-    juce::Logger::writeToLog("HERE");
     if (editorTitle == "Frequency Editor") {
 		freqSong = songcode;
 	}

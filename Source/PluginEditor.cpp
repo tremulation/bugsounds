@@ -13,98 +13,173 @@
 //==============================================================================
 BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p, *this), frequencyEditor("Frequency Editor", "frequencyEditor", p, *this),
-	resonatorEditor("Resonator Editor", "resonatorEditor", p, *this), resonatorKnobRack(p, *this), headerBar(p, *this), pipSequencer(p, *this), chorusKnobRack(p, *this)
+    resonatorEditor("Resonator Editor", "resonatorEditor", p, *this), resonatorKnobRack(p, *this), headerBar(p, *this), pipSequencer(p, *this),
+    chorusKnobRack(p, *this), helpCompendium(*this), levelMeter(p)
 {
-    addAndMakeVisible(headerBar);
+    juce::LookAndFeel::setDefaultLookAndFeel(&myCustomLNF);
+    setResizable(true, true);
+    getConstrainer()->setFixedAspectRatio(800.0f/640.0f);
+    setSize(baseWidth, baseHeight);
 
-    addAndMakeVisible(frequencyEditor);
-    addAndMakeVisible(resonatorEditor);
-    testButton.setButtonText("Play song from code");
+                        addAndMakeVisible(headerBar);
+    addAndMakeVisible(pipSequencer);      addAndMakeVisible(clickSettingsRack);
+    addAndMakeVisible(frequencyEditor);   addAndMakeVisible(resonatorEditor);
+    addAndMakeVisible(resonatorKnobRack);  addAndMakeVisible(chorusKnobRack);
+
+    testButton.setButtonText("Compile");
     testButton.onClick = [this] { 
         freqCodeEditorHasChanged(); 
         audioProcessor.setPipSequence(pipSequencer.getPips());
     };
     addAndMakeVisible(testButton);
-    addAndMakeVisible(pipSequencer);
-
-    addAndMakeVisible(clickSettingsRack);
-    addAndMakeVisible(resonatorKnobRack);
-	addAndMakeVisible(chorusKnobRack);
-    setSize(baseWidth, baseHeight);
 
     addAndMakeVisible(helpCompendium);
     helpCompendium.setVisible(false);
-    helpCompendium.onClose = [this]() {
-        setSize(baseWidth, baseHeight);
-        resized();
-    };
+
+    startTimerHz(24);
+    addAndMakeVisible(levelMeter);
 }
 
-BugsoundsAudioProcessorEditor::~BugsoundsAudioProcessorEditor()
-{
+BugsoundsAudioProcessorEditor::~BugsoundsAudioProcessorEditor() {
+    juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
 }
 
 //==============================================================================
 void BugsoundsAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    g.fillAll (Colour(0xff222222));
 }
 
 void BugsoundsAudioProcessorEditor::resized()
 {
-    const int padding = 5;
-    const int pipSequencerHeight = 200;
-    const int buttonHeight = 30;
-    const int rackHeight = 110;
-    const int headerHeight = 40;
+    auto bounds = getLocalBounds();
+    int mainWidth = getWidth();
+    if (helpCompendium.isVisible()) mainWidth = mainWidth - (mainWidth * (250.f / 800.f));
+    const float scalar = (float)getHeight() / (float)baseHeight;
 
-    auto fullArea = getLocalBounds();
+    //------------------- header. 6.25% of total height ------------------- 
+    auto headerHeight = (int)(getHeight() * 40.f / 640.f);
+    juce::Rectangle<int> headerArea;
+    float  guideWidth = helpWidth * scalar;
+    if (helpCompendium.isVisible()) {
+        headerArea = bounds.removeFromTop(headerHeight).withTrimmedRight(guideWidth);
+    } else {
+        headerArea = bounds.removeFromTop(headerHeight);
+    }
 
-    if (helpCompendium.isVisible())
-    {
-        auto helpArea = fullArea.removeFromRight(helpWidth);
+    headerBar.setBounds(headerArea);
+
+    //----------------- Credits overlay. If it's on -----------------------
+    if (creditsOverlay) {
+        creditsOverlay->scalar = getHeight() / 640.0f;
+        float w = 361 * creditsOverlay->scalar;
+        float h = 228 * creditsOverlay->scalar;
+        creditsOverlay->setSize(w, h);
+        auto centered = getLocalBounds().withSizeKeepingCentre(w, h);
+        if (helpCompendium.isVisible())
+            centered = getLocalBounds().withTrimmedRight(roundToInt(guideWidth)).withSizeKeepingCentre(w, h);
+        creditsOverlay->setBounds(centered);
+        blocker->setBounds(getLocalBounds());
+    }
+    
+    //----------------------- Pip Sequencer. -------------------------------
+    int pipSeqHeight = 189.f * scalar;
+    int pipSeqWidth  = 534.f * scalar;
+    auto pipSequencerBounds = bounds.removeFromTop(pipSeqHeight);
+    auto clickSettingsBounds = pipSequencerBounds.removeFromRight(getWidth() - pipSeqWidth);
+    pipSequencer.setBounds(pipSequencerBounds);
+
+    //----------------------- Click Settings. ------------------------------
+    if (helpCompendium.isVisible()) clickSettingsBounds.removeFromRight(guideWidth);
+    clickSettingsRack.setBounds(clickSettingsBounds);
+
+    //---------------- editors/bottom area setup. --------------------------
+    auto bottomArea = bounds;
+    bottomArea.removeFromTop(4.f * scalar);  //top padding
+    auto editorSide = bottomArea.removeFromLeft(530.f * scalar);
+    bottomArea.removeFromLeft(4.f * scalar); //padding between editor and settings
+    auto settingsSide = bottomArea; 
+    frequencyEditor.setBounds(editorSide.removeFromTop(180.f * scalar));
+    resonatorEditor.setBounds(editorSide.removeFromTop(180.f * scalar));
+    //add in compile button and decibel meter here later
+
+
+    //----------------------- Bottom Settings. ------------------------------
+    auto settingsModuleHeight = settingsSide.getHeight() / 2.f;
+    auto chorusBounds = settingsSide.removeFromTop(settingsModuleHeight);
+    if (helpCompendium.isVisible()) chorusBounds.removeFromRight(guideWidth);
+    chorusKnobRack.setBounds(chorusBounds);
+    if (helpCompendium.isVisible()) settingsSide.removeFromRight(guideWidth);
+    resonatorKnobRack.setBounds(settingsSide);
+
+    //-------------------button and vol slider. ----------------------------
+    auto compileButtonBounds = editorSide.removeFromLeft(193.f * scalar);
+    compileButtonBounds.reduced(4.f * scalar);
+    testButton.setBounds(compileButtonBounds);
+    levelMeter.setBounds(editorSide.withTrimmedTop(3.f * scalar).withTrimmedBottom(3.f * scalar));
+
+    //help compendium
+    if (helpCompendium.isVisible()) {
+        auto helpArea = getLocalBounds().removeFromRight(helpWidth * scalar);
         helpCompendium.setBounds(helpArea);
-    }
-    else
-    {
-        helpCompendium.setBounds(0, 0, 0, 0); // Collapse it completely if hidden
-    }
+    } 
 
-    // Now fullArea is only the main part
 
-    // Header bar at the top
-    headerBar.setBounds(fullArea.removeFromTop(headerHeight));
 
-    // add padding around edges
-    auto area = fullArea.reduced(padding);
 
-    // Split into left and right sections
-    auto leftArea = area.removeFromLeft(area.getWidth() * (8.f / 12.f));
-    leftArea.removeFromRight(padding / 2); // tiny extra padding
-    area.removeFromLeft(padding / 2);       // matching padding
+    //const int padding = 5;
+    //const int pipSequencerHeight = 200;
+    //const int buttonHeight = 30;
+    //const int rackHeight = 110;
+    //const int headerHeight = 40;
 
-    const int editorHeight = (leftArea.getHeight() - pipSequencerHeight - buttonHeight - padding * 2) / 2;
+    //auto fullArea = getLocalBounds();
 
-    // Pip Sequencer
-    pipSequencer.setBounds(leftArea.removeFromTop(pipSequencerHeight));
-    leftArea.removeFromTop(padding);
+    //if (helpCompendium.isVisible())
+    //{
+    //    auto helpArea = fullArea.removeFromRight(helpWidth);
+    //    helpCompendium.setBounds(helpArea);
+    //}
+    //else
+    //{
+    //    helpCompendium.setBounds(0, 0, 0, 0); // Collapse it completely if hidden
+    //}
 
-    // Frequency Editor
-    frequencyEditor.setBounds(leftArea.removeFromTop(editorHeight));
-    leftArea.removeFromTop(padding);
+    //// Now fullArea is only the main part
 
-    // Resonator Editor
-    resonatorEditor.setBounds(leftArea.removeFromTop(editorHeight));
-    leftArea.removeFromTop(padding);
+    //// Header bar at the top
+    //headerBar.setBounds(fullArea.removeFromTop(headerHeight));
 
-    // Test Button
-    testButton.setBounds(leftArea.removeFromTop(buttonHeight).reduced(padding, 0));
+    //// add padding around edges
+    //auto area = fullArea.reduced(padding);
 
-    // Right side (controls)
-    clickSettingsRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2));
-    resonatorKnobRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2));
-    chorusKnobRack.setBounds(area);
+    //// Split into left and right sections
+    //auto leftArea = area.removeFromLeft(area.getWidth() * (8.f / 12.f));
+    //leftArea.removeFromRight(padding / 2); // tiny extra padding
+    //area.removeFromLeft(padding / 2);       // matching padding
+
+    //const int editorHeight = (leftArea.getHeight() - pipSequencerHeight - buttonHeight - padding * 2) / 2;
+
+    //// Pip Sequencer
+    //pipSequencer.setBounds(leftArea.removeFromTop(pipSequencerHeight));
+    //leftArea.removeFromTop(padding);
+
+    //// Frequency Editor
+    //frequencyEditor.setBounds(leftArea.removeFromTop(editorHeight));
+    //leftArea.removeFromTop(padding);
+
+    //// Resonator Editor
+    //resonatorEditor.setBounds(leftArea.removeFromTop(editorHeight));
+    //leftArea.removeFromTop(padding);
+
+    //// Test Button
+    //testButton.setBounds(leftArea.removeFromTop(buttonHeight).reduced(padding, 0));
+
+    //// Right side (controls)
+    //clickSettingsRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2));
+    //resonatorKnobRack.setBounds(area.removeFromTop(30 + (rackHeight - 30) * 2));
+    //chorusKnobRack.setBounds(area);
 }
 
 
@@ -157,23 +232,72 @@ resError:
 
 
 void BugsoundsAudioProcessorEditor::toggleHelpCompendium(juce::String pageId) {
-    DBG("Page name:" + helpCompendium.getPageID());
-    if (helpCompendium.isVisible()) {
-        if (helpCompendium.getPageID() == pageId) {
-            helpCompendium.closeCompendium();
-            helpCompendium.setVisible(false);
-            
-        }
-        else {
+    //compute scale only from height (never touch height)
+    const float scalar = (float)getHeight() / (float)baseHeight;
+    const float helpPx = helpWidth * scalar;
+    const int   currentW = getWidth();
+    const int   currentH = getHeight();
+
+    if (pageId == "close") {
+        goto CloseIt;
+    }
+
+    if (helpCompendium.isVisible() && helpCompendium.getPageID() == pageId) {
+        // close it
+        CloseIt:
+        helpCompendium.closeCompendium();
+        helpCompendium.setVisible(false);
+
+     
+        int newW = currentW - roundToInt(helpPx);
+        getConstrainer()->setFixedAspectRatio((float)newW / (float)currentH);
+        setSize(newW, currentH);
+    } else  {
+        // open it (or change page)
+        if (!helpCompendium.isVisible())  {
+            helpCompendium.setVisible(true);
+            helpCompendium.setPage(pageId);
+
+            int newW = currentW + roundToInt(helpPx);
+            getConstrainer()->setFixedAspectRatio((float)newW / (float)currentH);
+            setSize(newW, currentH);
+        } else {
+            // visible but a different page -> just swap content
             helpCompendium.setPage(pageId);
         }
     }
-    else {
-        helpCompendium.setVisible(true);
-        helpCompendium.setPage(pageId);
-        setSize(baseWidth + helpWidth, baseHeight);
-        resized();
-    }
+    resized();
+}
+
+
+
+void BugsoundsAudioProcessorEditor::showCreditsWindow() {
+    if (creditsOverlay) return;
+
+    //create and add the blocker
+    blocker = std::make_unique<ClickBlocker>();
+    blocker->onClickOutside = [this]() {
+        // remove both components
+        removeChildComponent(creditsOverlay.get());
+        creditsOverlay.reset();
+
+        removeChildComponent(blocker.get());
+        blocker.reset();
+    };
+
+    addAndMakeVisible(blocker.get());
+    blocker->setBounds(getLocalBounds());
+
+    //draw credits over the top 
+    creditsOverlay = std::make_unique<Crebits>();
+    addAndMakeVisible(creditsOverlay.get());
+
+    resized();
+}
+
+void BugsoundsAudioProcessorEditor::timerCallback(){
+    levelMeter.setLevel(audioProcessor.getRmsValue(0), audioProcessor.getRmsValue(1));
+    levelMeter.repaint();
 }
 
 

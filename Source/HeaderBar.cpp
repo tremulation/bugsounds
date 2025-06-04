@@ -14,6 +14,7 @@
 
 
 
+
 HeaderBar::HeaderBar(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& editor) 
     : audioProcessor(p), audioEditor(editor), presetPanel(p.getPresetManager())
 {
@@ -27,6 +28,11 @@ HeaderBar::HeaderBar(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& 
         if (logoImage.isValid()) {
             logoComponent.setImage(logoImage, juce::RectanglePlacement::centred);
             addAndMakeVisible(logoComponent);
+
+			logoComponent.onClick = [this] {
+				juce::Logger::writeToLog("Logo clicked! Opening credits window...");
+				audioEditor.showCreditsWindow(); 
+				};
         }
         else {
             juce::Logger::writeToLog("Failed to create image from binary data");
@@ -37,8 +43,8 @@ HeaderBar::HeaderBar(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& 
     }
 
     //title
-    title.setText("bugsounds", juce::dontSendNotification);
-    title.setFont(juce::Font(20.0f, juce::Font::bold));
+    title.setText("Bugsounds", juce::dontSendNotification);
+    title.setFont(UIDrawer::getFontInterBold().withHeight(25.0f));
     addAndMakeVisible(title);
 
     //preset selector
@@ -47,33 +53,55 @@ HeaderBar::HeaderBar(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& 
     //help button
     helpButton = std::make_unique<HelpButton>(
         [this] { audioEditor.toggleHelpCompendium("bugSounds"); });
+    helpButton->setName("HeaderHelp");
     addAndMakeVisible(helpButton.get());
 }
 
 
 
 void HeaderBar::resized() {
-    const auto container = getLocalBounds().reduced(4);
-    auto bounds = container;
+    auto bounds = getLocalBounds();
+    auto container = getLocalBounds();
 
-    // 1. Logo (left side)
-    const int logoWidth = 40;
-    auto logoArea = bounds.removeFromLeft(logoWidth).withTrimmedBottom(3);
+    //remove area for shadow on the bottom. otherwise it won't look 3d
+    bounds.removeFromBottom((int)getHeight() * 5.f / 640.f);
+
+    //------------------- logo. square bounding box.------------------- 
+    //TODO make the logo extend past the bounds of the header to make it look cooler
+    const int logoW = (int)(getWidth() * 40.f / 640.f);
+    auto logoArea = bounds.removeFromLeft(logoW);
     logoComponent.setBounds(logoArea);
+    
+    //padding btw logo and title
+    const int logoTitleGap = getWidth() * 4.f / 640.f;
+    bounds.removeFromLeft(logoTitleGap);
 
-    // 2. Title (left of remaining space)
-    auto titleArea = bounds.removeFromLeft(juce::jmin(120, bounds.getWidth()));
-    title.setBounds(titleArea.reduced(5));
+    //------------------- Title.  ------------------- 
+    const int titleW = getWidth() * 164.f / 800.f;
+    const int titleH = getHeight() ;
+    auto titleArea = bounds.removeFromLeft(titleW).withSizeKeepingCentre(titleW, titleH);
+    title.setBounds(titleArea);
+    //and scale the font
+    float scale = getHeight() / 40.0f;   
+    float fontHeight = getHeight() - scale * 10.f;
+    title.setFont(UIDrawer::getFontInterBold().withHeight(fontHeight));
 
-    // 3. Help button (right side)
-    const int helpButtonSize = 24;
-    auto helpArea = bounds.removeFromRight(container.getHeight()).reduced(3);
+    //------------------- Preset Panel -------------------
+    const int presetW = (int) (getWidth() * 300.f / 640.f);
+    const int presetH = (int) getHeight();  //child is responsible for padding
+    presetPanel.setBounds(container.withSizeKeepingCentre(presetW, presetH));
+
+    //------------------- Help Button -------------------
+    const int scaledHelpW = (int)getHeight();   //40 at start
+    auto helpArea = bounds.removeFromRight(scaledHelpW);
     helpButton->setBounds(helpArea);
-
-    // 4. Preset panel (centered, fixed size)
-    presetPanel.setBounds(container.withSizeKeepingCentre(350, getHeight() * (0.9f)));
 }
+
+
 void HeaderBar::paint(juce::Graphics& g) {
-    g.setColour(juce::Colours::white);
-    g.drawRect(getLocalBounds().withTrimmedTop(39), 1);
+    float scalar = getWidth() / 800.f;
+    drawUIBlock( g, getLocalBounds(),
+        Colour::fromString("#3E28BD").withAlpha(1.0f),
+        Colour::fromString("#81CAA5").withAlpha(1.0f),
+        false, true,  scalar);
 }

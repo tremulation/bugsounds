@@ -12,11 +12,13 @@
 
 #include <JuceHeader.h>
 #include "ButtonsAndStuff.h"
+#include "UIDrawer.h"
+#include "AnimatedKnob.h"
 
 class BugsoundsAudioProcessor;
 class BugsoundsAudioProcessorEditor;
 
-class ClickSettingsKnobRack : public juce::Component {
+class ClickSettingsKnobRack : public juce::Component, public UIDrawer {
 
 public:
     ClickSettingsKnobRack(BugsoundsAudioProcessor& processor, BugsoundsAudioProcessorEditor& editor);
@@ -28,8 +30,14 @@ private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
 
     const int margin = 5;
-    juce::Slider clickTimingKnob, clickPitchKnob, adRatioKnob, startFadeoutknob, startJitterKnob, floorFreqKnob;
     juce::Label titleLabel, timingLabel, pitchLabel, adRatioLabel, startFadeoutLabel, startJitterLabel, floorFreqLabel;
+    AnimatedKnobSlider clickTimingKnob{ timingLabel };
+    AnimatedKnobSlider clickPitchKnob{ pitchLabel };
+    AnimatedKnobSlider adRatioKnob{ adRatioLabel };
+    AnimatedKnobSlider startFadeoutKnob{ startFadeoutLabel };
+    AnimatedKnobSlider startJitterKnob{ startJitterLabel };
+    AnimatedKnobSlider floorFreqKnob{ floorFreqLabel };
+
     std::unique_ptr<SliderAttachment> timingAttachment;
     std::unique_ptr<SliderAttachment> pitchAttachment;
     std::unique_ptr<SliderAttachment> adRatioAttachment;
@@ -37,14 +45,10 @@ private:
     std::unique_ptr<SliderAttachment> minVolFreqAttachment;
     std::unique_ptr<SliderAttachment> maxVolFreqAttachment;
 
-    juce::Slider clickVolumeSlider;
-    juce::Label clickVolumeLabel;
-    std::unique_ptr<SliderAttachment> clickVolumeAttachment;
-
     std::unique_ptr<HelpButton>         helpButton;
 
     BugsoundsAudioProcessor& audioProcessor;
     BugsoundsAudioProcessorEditor& audioEditor;
 
-    void initializeKnob(juce::Slider& slider, juce::Label& label, const juce::String& labelText, const juce::String& paramName, std::unique_ptr<SliderAttachment>& attachment);
+    void initializeKnob(AnimatedKnobSlider& slider, juce::Label& label, const juce::String& labelText, const juce::String& paramName, std::unique_ptr<SliderAttachment>& attachment);
 };

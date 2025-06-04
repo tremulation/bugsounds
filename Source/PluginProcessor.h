@@ -71,17 +71,22 @@ public:
     
     //MY FUNCTIONS
     void setSongAST(juce::ReferenceCountedObjectPtr<ScriptNode> scriptAST) {
-		myVoice->setSongScript(scriptAST);
+		chorusVoice->setSongScript(scriptAST);
     }
 
 	void setResAST(juce::ReferenceCountedObjectPtr<ScriptNode> scriptAST) {
-		myVoice->setResScript(scriptAST);
+		chorusVoice->setResScript(scriptAST);
 	}
     
     void setPipSequence(std::vector<Pip> pips) {
-        myVoice->setPipSequence(pips);
+        chorusVoice->setPipSequence(pips);
     }
 
+    float getRmsValue(const int channel) const {
+        jassert(channel == 0 || channel == 1);
+        if      (channel == 0) return rmsLevelLeft.getCurrentValue();
+        else if (channel == 1) return rmsLevelRight.getCurrentValue();
+    }
 
     //getter method for pips
     const std::vector<Pip>& getPips() const {
@@ -98,7 +103,7 @@ public:
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
     void setPips(std::vector<Pip> pips) { 
         this->pips = pips; 
-        myVoice->setPipSequence(pips);
+        chorusVoice->setPipSequence(pips);
         clickPreviewer->setPips(pips);
     }
     void updatePipBarModes(EditingMode newMode) { pipMode = newMode; }
@@ -141,7 +146,7 @@ public:
         return chorusVoicePositions;
     }
 
-    void rerollChorusVoicePositions() { myVoice->randomizeChorusPositions(); }
+    void rerollChorusVoicePositions() { chorusVoice->randomizeChorusPositions(); }
 
     void setChorusVoicePositions(std::vector<ChorusVoicePosition> newPositions) {
         chorusVoicePositions = newPositions;
@@ -162,11 +167,22 @@ private:
     std::vector<Pip> pips;
     enum EditingMode pipMode = EditingMode::FREQUENCY;
 
-    juce::Synthesiser mySynth;
-    SynthVoice* myVoice;
+    //chorus synth has a single voice that handles both mono and chorus playback
+    juce::Synthesiser chorusSynth;
+    SynthVoice* chorusVoice;
+
+    //piano synth has several voices (polyphony level I think)
+    const int synthPolyphony = 10;
+    juce::Synthesiser pianoSynth;
+
+    //for displayng volume on the level meter
+    juce::LinearSmoothedValue<float> rmsLevelLeft;
+    juce::LinearSmoothedValue<float> rmsLevelRight;
+
     double lastSampleRate;
     std::unique_ptr<PresetManager> presetManager;
     std::unique_ptr<ClickPreviewer> clickPreviewer;
+
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BugsoundsAudioProcessor)

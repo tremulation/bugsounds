@@ -12,60 +12,15 @@
 #include <JuceHeader.h>
 #include <BinaryData.h>
 #include <functional>
+#include "UIDrawer.h"
 
 
-class HelpCloseButton : public juce::TextButton {
+
+class BugsoundsAudioProcessorEditor;
+
+class HelpCompendium : public juce::Component, private UIDrawer {
 public:
-    HelpCloseButton() : juce::TextButton("X") {
-        setLookAndFeel(&lnf);
-        setMouseCursor(juce::MouseCursor::PointingHandCursor);
-    }
-
-    ~HelpCloseButton() {
-        setLookAndFeel(nullptr);
-    }
-
-private:
-    struct ButtonLookAndFeel : public juce::LookAndFeel_V4 {
-        void drawButtonBackground(juce::Graphics& g, juce::Button& b,
-            const juce::Colour&, bool, bool) override {
-            auto bounds = b.getLocalBounds().toFloat().reduced(1);
-            g.setColour(b.isOver() ? juce::Colours::green : juce::Colours::darkgrey);
-            g.fillRoundedRectangle(bounds, 4.0f);
-            g.setColour(juce::Colours::white.withAlpha(0.8f));
-            g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
-        }
-
-        void drawButtonText(juce::Graphics& g, juce::TextButton& b,
-            bool, bool) override {
-            g.setColour(juce::Colours::white);
-            g.setFont(juce::Font(18.0f, juce::Font::bold));
-            g.drawText(b.getButtonText(), b.getLocalBounds(),
-                juce::Justification::centred);
-        }
-    };
-
-    ButtonLookAndFeel lnf;
-};
-
-
-
-
-
-class HelpCompendium : public juce::Component {
-public:
-    HelpCompendium()
-    {
-        addAndMakeVisible(viewport);
-        viewport.setViewedComponent(&contentComponent);
-        viewport.setScrollBarsShown(true, false);
-
-        closeButton = std::make_unique<HelpCloseButton>();
-        closeButton->onClick = [this] {
-            closeCompendium();
-            };
-        addAndMakeVisible(closeButton.get());
-    }
+    HelpCompendium(BugsoundsAudioProcessorEditor& editor);
 
 
     struct ContentElement {
@@ -76,69 +31,12 @@ public:
     };
 
 
-    void closeCompendium() {
-        setVisible(false);
-        if (onClose != nullptr) onClose();
-        currentPageName = "closed";
-        currentPageID = "closed";
-        pageContent.clear();
-    }
+    void closeCompendium();
+    void paint(juce::Graphics& g) override;
 
+    void resized() override;
 
-    void paint(juce::Graphics& g) override {
-        // Restored original background and border styling
-        g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-
-        auto bounds = getLocalBounds();
-        g.setColour(juce::Colours::white);
-        g.drawLine(bounds.getX(), bounds.getY(), bounds.getX(), bounds.getBottom(), 2.0f);
-
-        const int margin = 10;
-        auto contentArea = bounds.reduced(margin);
-
-        // Original border drawing
-        g.setColour(juce::Colours::white);
-        g.drawRect(contentArea, 1);
-
-        // Restored original header styling
-        auto headerArea = contentArea.removeFromTop(30);
-        g.setColour(juce::Colours::white);
-        g.drawRect(headerArea);
-
-        // Original header text drawing
-        g.setColour(juce::Colours::white);
-        g.setFont(juce::Font(16.0f).boldened());
-        g.drawText("Help: " + currentPageName, headerArea, juce::Justification::centred);
-
-        // Original divider line
-        g.setColour(juce::Colours::lightgrey);
-        g.drawLine(headerArea.getX(),
-            headerArea.getBottom(),
-            headerArea.getRight(),
-            headerArea.getBottom(),
-            2.0f);
-    }
-
-    void resized() override {
-        auto bounds = getLocalBounds().reduced(10);
-        auto headerBounds = bounds.removeFromTop(30); // Account for header height
-        closeButton->setBounds(headerBounds.removeFromRight(30).reduced(5));
-        viewport.setBounds(bounds);
-
-        // Sync content width with viewport
-        contentComponent.setSize(viewport.getMaximumVisibleWidth(), contentComponent.getHeight());
-    }
-
-    void setPage(const juce::String& pageID) {
-        currentPageID = pageID;
-        currentPageName = pageID;
-        pageContent.clear();
-        loadPageContent(pageID);
-        contentComponent.setContent(pageContent);
-        viewport.setViewPosition(0, 0);
-        repaint();
-        resized();
-    }
+    void setPage(const juce::String& pageID);
 
     juce::String getPageID() {
         return currentPageID;
@@ -150,6 +48,7 @@ private:
     juce::String currentPageName = "closed";
     juce::String currentPageID = "closed";
     juce::Viewport viewport;
+    juce::Label headerLabel;
 
     struct ContentComponent : public juce::Component
     {
@@ -162,12 +61,13 @@ private:
 
         void paint(juce::Graphics& g) override
         {
-            const int hMargin = 5;
-            const int vMargin = 10;
-            const int spacing = 15;
-            const int subH = 25;
+            float scalar = getWidth() / 292.f;
+            const float hMargin = 5.f * scalar;
+            const float vMargin = 10.f * scalar;
+            const float spacing = 15.f * scalar;
+            const float subH = 25.f * scalar;
+            const float fontSize = 14.f * scalar;
 
-            // Compute once:
             auto totalW = getWidth();
             auto contentW = totalW - 2 * hMargin;
             auto x0 = hMargin;
@@ -177,40 +77,46 @@ private:
             {
                 if (e.type == ContentElement::Subheader)
                 {
-                    // Full-width subheader background
-                    g.setColour(juce::Colours::darkgrey.withAlpha(0.2f));
-                    g.fillRect(x0, y, contentW, subH);
+                    x0 = 0;
+                    juce::Colour startColor = Colour(0xff72d9ff).withAlpha(.5f);
+                    juce::Colour endColor  = Colour(0xff3e28bd).withAlpha(.1f);
+                    ColourGradient gradient(
+                        startColor,
+                        x0, (float)y,
+                        endColor,
+                        x0 + contentW, (float)y,
+                        false);
 
-                    g.setColour(juce::Colours::white);
-                    g.setFont(juce::Font(14.0f).boldened());
+                    g.setGradientFill(gradient);
+                    g.fillRect(x0, (float)y, contentW, subH);
+
+                    x0 += hMargin * 2;
+                    g.setColour(juce::Colours::black);
+                    g.setFont(headerFont);
                     g.drawText(e.content,
                         x0, y,
                         contentW, subH,
                         juce::Justification::centredLeft);
 
                     y += subH + spacing;
+                    x0 = hMargin;
                 }
                 else if (e.type == ContentElement::Text)
                 {
                     g.setColour(juce::Colours::white);
-                    g.setFont(juce::Font(14.0f));
+                    g.setFont(font);
 
-                    // Preserve explicit newlines
                     auto paragraphs = juce::StringArray::fromTokens(e.content, "\n", "");
 
                     for (auto& p : paragraphs)
                     {
                         juce::AttributedString as;
-                        as.append(p, juce::Font(14.0f), juce::Colours::white);
+                        as.append(p, font, juce::Colours::black);
                         as.setWordWrap(juce::AttributedString::WordWrap::byWord);
 
                         juce::TextLayout tl;
-                        // Use the single width:
                         tl.createLayout(as, (float)contentW);
-
-                        // Draw at x0, y
-                        tl.draw(g, { (float)x0, (float)y,
-                                      (float)contentW, tl.getHeight() });
+                        tl.draw(g, { (float)x0, (float)y, (float)contentW, tl.getHeight() });
 
                         y += (int)tl.getHeight() + spacing;
                     }
@@ -220,16 +126,19 @@ private:
 
         void resized() override { reflow(); }
         void parentSizeChanged() override { reflow(); }
-
+        juce::Font font;
+        juce::Font headerFont;
     private:
         std::vector<ContentElement> content;
 
         void reflow()
         {
-            const int hMargin = 5;
-            const int vMargin = 10;
-            const int spacing = 15;
-            const int subH = 25;
+            float scalar = getWidth() / 292.f;
+            const float hMargin = 5.f * scalar;
+            const float vMargin = 10.f * scalar;
+            const float spacing = 15.f * scalar;
+            const float subH = 25.f * scalar;
+            const float fontSize = 14.f * scalar;
 
             auto totalW = getWidth();
             auto contentW = totalW - 2 * hMargin;
@@ -247,25 +156,25 @@ private:
                     for (auto& p : paragraphs)
                     {
                         juce::AttributedString as;
-                        as.append(p, juce::Font(14.0f), juce::Colours::white);
+                        as.append(p, juce::Font(fontSize), juce::Colours::white);
                         as.setWordWrap(juce::AttributedString::WordWrap::byWord);
 
                         juce::TextLayout tl;
-                        // Use the same single width:
                         tl.createLayout(as, (float)contentW);
-
                         totalH += (int)tl.getHeight() + spacing;
                     }
                 }
             }
 
-            totalH += vMargin;  // bottom padding
-            setSize(getWidth(), totalH);
+            totalH += vMargin;
+            setSize(getWidth(), totalH * 2.f);
         }
+
+
     } contentComponent;
     std::vector<ContentElement> pageContent;
-
-    std::unique_ptr<HelpCloseButton> closeButton;
+    std::unique_ptr<juce::TextButton> closeButton;
+    BugsoundsAudioProcessorEditor& audioEditor;
     
 
     void loadPageContent(const juce::String& pageID) {

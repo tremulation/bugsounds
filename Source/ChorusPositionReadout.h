@@ -20,29 +20,30 @@ public:
 
     ChorusPositionReadout(BugsoundsAudioProcessor& p)
         : processor(p) {
-        startTimerHz(30);   //30 updates per sec
+        startTimerHz(30);   
     }
 
 
     void paint(juce::Graphics& g) override {
         //background fill
-        auto bounds = getLocalBounds().toFloat();
-        g.fillAll(juce::Colours::black);
-        g.setColour(juce::Colours::white);
-
-        
+        float scale = getWidth() / 68.f;
+        auto bounds = getLocalBounds();
+        g.setColour(juce::Colour(0xff1B241B));
+        g.fillRect(bounds);
 
         //draw waves around playing voices
         for (auto& wave : waves) {
-            g.setColour(juce::Colours::white.withAlpha(wave.alpha));
-            float d = wave.radius;
-            g.drawEllipse(wave.x - d, wave.y - d, d * 2.0f, d * 2.0f, 2.0f);
+            g.setColour(juce::Colours::white.withAlpha(juce::jlimit<float>(0.0, 1.f, wave.alpha)));
+            float d = wave.radius * scale;
+            g.drawEllipse(wave.x - d * 2, wave.y - d * 2,
+                          d * 4.f, d * 4.f,
+                          2.0f * scale);
         }
 
         //draw listener position
         g.setColour(juce::Colours::white.withAlpha(1.0f));
         auto center = bounds.getCentre();
-        g.fillEllipse(center.x - 5, center.y - 5, 10, 10);
+        g.fillEllipse(center.x - 5 * scale, center.y - 5 * scale, 5.f * scale, 5.f * scale);
         g.setColour(juce::Colours::skyblue);
 
         //draw voices
@@ -51,18 +52,23 @@ public:
             float distance = pos.distance;
             float angle = pos.angle;
 
-            const float minDistance = 5.0f;
-            const float maxDistance = 15.0f; 
-            float normalizedDistance = distance / (maxDistance - minDistance);
+            const float minDistance = 5.0f * scale;
+            const float maxDistance = 15.0f * scale;
+            float normalizedDistance = (distance * scale)/ (maxDistance - minDistance);
 
-            float maxRadius = bounds.getWidth() / 2 - 15;
+
+            float maxRadius = (bounds.getWidth() / 2.f) - 15.f * scale;
             float radius = normalizedDistance * maxRadius;
 
             float x = center.x + std::cos(angle) * radius;
             float y = center.y + std::sin(angle) * radius;
 
-            g.fillEllipse(x - 3, y - 3, 6, 6);
+            g.fillEllipse(x - 3.f * scale, y - 3.f * scale, 3.f * scale, 3.f * scale);
         }
+
+        //border last
+        g.setColour(juce::Colour(0xff555555));
+        g.drawRect(bounds, 2.f * scale);
     }
 
 
@@ -80,27 +86,28 @@ private:
 
         auto bounds = getLocalBounds().toFloat();
         auto center = bounds.getCentre();
+        float scale = getWidth() / 68.f;
 
         //spawn a ripple for each playing note
         if (++spawnCounter >= spawnIntervalTicks) {
             spawnCounter = 0;
             for (auto& pos : currentPositions) {
                 if (pos.isPlaying) {
-                    float normD = (pos.distance) / (15.0f - 5.0f);
-                    float maxR = bounds.getWidth()/2 - 15.0f;
+                    float normD = (pos.distance * scale) / (15.0f * scale  - 5.0f * scale);
+                    float maxR = bounds.getWidth()/2 - 15.0f * scale;
                     float r0 = normD * maxR;
-                    float x = center.x + std::cos(pos.angle) * r0;
-                    float y = center.y + std::sin(pos.angle) * r0;
+                    float x = center.x + std::cos(pos.angle) * r0 - 1.5f * scale;
+                    float y = center.y + std::sin(pos.angle) * r0 - 1.5f * scale;
 
-                    waves.push_back({ x, y, 0.0f, 1.0f });
+                    waves.push_back({ x, y, 0.0f, 2.0f * scale });
                 }
             }
         }
        
 
         //advance/cull old ripples
-        const float speed = 0.5f;    //1/2 pix per tick
-        const float fadeAmount = 0.05f; //alpha drop
+        const float speed = 0.3f;    //1/2 pix per tick
+        const float fadeAmount = 0.1f; //alpha drop
         
         for (int i = (int)waves.size() - 1; i >= 0; --i)
         {

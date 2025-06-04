@@ -19,10 +19,12 @@ ResonatorKnobRack::ResonatorKnobRack(BugsoundsAudioProcessor& processor, Bugsoun
 {
     powerButton = std::make_unique<juce::ToggleButton>("");
     powerButton->setClickingTogglesState(true);
-    powerButton->setLookAndFeel(&powerButtonLAF);
+    powerButton->setName("ResonatorPower");
     addAndMakeVisible(powerButton.get());
 
-    titleLabel.setFont(juce::Font(16.0f));
+    //set up the rack's title
+    titleLabel.setFont(UIDrawer::getFontInterBold().withHeight(21.0f).withExtraKerningFactor(.1f));
+    titleLabel.setColour(Label::textColourId, Colour::fromString("#000000").withAlpha(1.0f));
     titleLabel.setJustificationType(juce::Justification::left);
     titleLabel.setText("Resonator Settings", juce::dontSendNotification);
     addAndMakeVisible(titleLabel);
@@ -31,10 +33,15 @@ ResonatorKnobRack::ResonatorKnobRack(BugsoundsAudioProcessor& processor, Bugsoun
     initializeKnob(resonatorOvertoneKnob, overtoneLabel, "Overtones", "Resonator Overtone Number", overtoneAttachment);
     initializeKnob(resonatorQKnob, qLabel, "Bandwidth", "Resonator Q", qAttachment);
     initializeKnob(resonatorGainKnob, gainLabel, "Peak Gain", "Resonator Gain", gainAttachment);
+    resonatorOvertoneKnob.setValueStyle(" overtones", 0, false);
+    resonatorQKnob.setValueStyle(" Hz", 1, false);
+    resonatorGainKnob.setValueStyle(" %", 1, false);
 
     // --- Bottom row: Harmonic Emphasis, Overtones, Drive ---
     initializeKnob(resonatorDecayKnob, oDecayLabel, "Overtone Decay", "Resonator Overtone Decay", oDecayAttachment);
     initializeKnob(resonatorOriginalMixKnob, originalMixLabel, "Original Mix", "Resonator Original Mix", originalMixAttachment);
+    resonatorDecayKnob.setValueStyle(" %", 1, true);
+    resonatorOriginalMixKnob.setValueStyle(" % ", 1, true);
 
     powerButtonAttachment = std::make_unique<ButtonAttachment>(
         audioProcessor.apvts, "Resonator On", *powerButton);
@@ -45,28 +52,26 @@ ResonatorKnobRack::ResonatorKnobRack(BugsoundsAudioProcessor& processor, Bugsoun
 
     helpButton = std::make_unique<HelpButton>(
         [this] { audioEditor.toggleHelpCompendium("resonatorSettings"); });
+    helpButton->setName("ResonatorHelp");
     addAndMakeVisible(helpButton.get());
 }
 
 void ResonatorKnobRack::paint(juce::Graphics& g)
 {
-    // Fill background
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+    auto  bounds = getLocalBounds();
+    float scalar = getHeight() / 189.f;
+    auto  headerBounds = bounds.removeFromTop(35.f * scalar);
+    auto  bodyBounds = bounds;
 
-    auto bounds = getLocalBounds();
-    auto contentBounds = bounds.reduced(margin);
+    //header
+    Colour c1 = Colour::fromString("#818BCA").withAlpha(1.0f);
+    Colour c2 = Colour::fromString("#818BCA").withAlpha(1.0f);
+    drawUIBlock(g, headerBounds, c1, c2, false, true, scalar);
 
-    // Draw outer white border
-    g.setColour(juce::Colours::white);
-    g.drawRect(contentBounds);
-
-    // Draw border under title
-    auto titleBounds = contentBounds.removeFromTop(30);
-    g.drawLine(titleBounds.getX(),
-        titleBounds.getBottom(),
-        titleBounds.getRight(),
-        titleBounds.getBottom(),
-        1.0f);
+    //body
+    c1 = Colour::fromString("#D9D9D9").withAlpha(1.0f);
+    c2 = Colour::fromString("#D9D9D9").withAlpha(1.0f);
+    drawUIBlock(g, bodyBounds, c1, c2, false, true, scalar);
 }
 
 
@@ -93,83 +98,87 @@ void ResonatorKnobRack::paintOverChildren(juce::Graphics& g) {
 
 void ResonatorKnobRack::resized()
 {
-    const int margin = 5;
-    auto bounds = getLocalBounds().reduced(margin);
+    //lay out header with buttons and title
+    auto bounds = getLocalBounds();
+    float scalar = getWidth() / 266.0f;
+    auto titleHeight = 35.f * scalar;
 
-    // --- Title row with power and help buttons---
-    auto titleHeight = 30;
     auto titleBounds = bounds.removeFromTop(titleHeight);
-
-    // Position buttons
-    auto powerButtonBounds = titleBounds.removeFromLeft(titleHeight).reduced(5);
+    auto powerButtonBounds = titleBounds.removeFromLeft(titleHeight);
     powerButton->setBounds(powerButtonBounds);
-    auto helpArea = titleBounds.removeFromRight(titleHeight).reduced(5);
-    helpButton->setBounds(helpArea);
+    titleBounds.removeFromLeft(5.f * scalar);
+    titleLabel.setBounds(titleBounds);
+    float fontHeight = scalar * 21.f;
+    titleLabel.setFont(UIDrawer::getFontInterBold().withHeight(fontHeight).withExtraKerningFactor(.05f));
 
-    // Position title next to power button
-    titleLabel.setBounds(titleBounds.reduced(5, 0));
+    auto helpButtonBounds = titleBounds.removeFromRight(titleHeight);
+    helpButton->setBounds(helpButtonBounds);
 
-    // Add spacing after title and separator line
-    bounds.removeFromTop(5);
 
-    // --- Divide remaining space into two rows for the knobs ---
-    int labelHeight = 20;
-    // Lower all knobs by a fixed number of pixels:
-    const int loweringOffset = -10;
-    // New variable to add extra spacing between knobs and labels:
-    const int labelSpacing = 5;
+    //divide the remaining area into two rows.
+    auto rowHeight = bounds.getHeight() / 2;
+    auto topRow = bounds.removeFromTop(rowHeight).translated(0.f, 5.f * scalar);
+    auto bottomRow = bounds; // what's left is the bottom row
 
-    int totalKnobAreaHeight = bounds.getHeight();
-    auto topRowBounds = bounds.removeFromTop(totalKnobAreaHeight / 2);
-    auto bottomRowBounds = bounds; // The rest of the area
+    //combine knob/label height calculations
+    const float knobSize = 60.f * scalar;
+    const float labelHeight = 25.f * scalar;
+    const float knobTotalHeight = knobSize + labelHeight;
+    const float labelFontSize = 17.f * scalar;
+    const int randomizeButtonSize = 15 * scalar;
 
-    // --- Define fixed knob size ---
-    const int knobSize = 60;
+    //loweringOffset shifts knobs downward, and labelSpacing adds extra space between knobs and labels.
+    const int loweringOffset = -10 * scalar;
+    const int labelSpacing = 10 * scalar;
+
 
     // --- Top Row Knobs (3 equally spaced knobs) ---
-    int topRowColumns = 3;
-    int topRowKnobWidth = topRowBounds.getWidth() / topRowColumns;
+    float colWTop = topRow.getWidth() / 3.0f;
 
-    auto qKnobArea = topRowBounds.removeFromLeft(topRowKnobWidth);
+    auto qKnobArea = topRow.removeFromLeft(colWTop);
     resonatorQKnob.setBounds(qKnobArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
+    qLabel.setFont(qLabel.getFont().withHeight(labelFontSize));
     qLabel.setBounds(qKnobArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 
-    auto gainKnobArea = topRowBounds.removeFromLeft(topRowKnobWidth);
+    auto gainKnobArea = topRow.removeFromLeft(colWTop);
     resonatorGainKnob.setBounds(gainKnobArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
+    gainLabel.setFont(gainLabel.getFont().withHeight(labelFontSize));
     gainLabel.setBounds(gainKnobArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 
-    auto overtoneKnobArea = topRowBounds;
+    auto overtoneKnobArea = topRow;
     resonatorOvertoneKnob.setBounds(overtoneKnobArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
+    overtoneLabel.setFont(overtoneLabel.getFont().withHeight(labelFontSize));
     overtoneLabel.setBounds(overtoneKnobArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 
     // --- Bottom Row Knobs (2 equally spaced knobs) ---
     int bottomRowColumns = 2;
-    int bottomRowKnobWidth = bottomRowBounds.getWidth() / bottomRowColumns;
+    int bottomRowKnobWidth = bottomRow.getWidth() / bottomRowColumns;
 
-    auto decayKnobArea = bottomRowBounds.removeFromLeft(bottomRowKnobWidth);
+    auto decayKnobArea = bottomRow.removeFromLeft(bottomRowKnobWidth);
     resonatorDecayKnob.setBounds(decayKnobArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
+    oDecayLabel.setFont(oDecayLabel.getFont().withHeight(labelFontSize));
     oDecayLabel.setBounds(decayKnobArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 
-    auto mixKnobArea = bottomRowBounds;
+    auto mixKnobArea = bottomRow;
     resonatorOriginalMixKnob.setBounds(mixKnobArea.withSizeKeepingCentre(knobSize, knobSize).translated(0, loweringOffset));
+    originalMixLabel.setFont(originalMixLabel.getFont().withHeight(labelFontSize));
     originalMixLabel.setBounds(mixKnobArea.removeFromBottom(labelHeight).translated(0, loweringOffset + labelSpacing));
 }
 
-void ResonatorKnobRack::initializeKnob(juce::Slider& slider, juce::Label& label,
-    const juce::String& labelText, const juce::String& paramName,
-    std::unique_ptr<SliderAttachment>& attachment)
-{
-    slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::NoTextBox, true, 70, 20);
-    slider.setPopupDisplayEnabled(true, true, nullptr);
+
+void ResonatorKnobRack::initializeKnob(AnimatedKnobSlider& slider, juce::Label& label, const juce::String& labelText, const juce::String& paramName, std::unique_ptr<SliderAttachment>& attachment) {
     addAndMakeVisible(slider);
 
     label.setText(labelText, juce::dontSendNotification);
+    label.setFont(UIDrawer::getFontInterRegular());
+    label.setColour(Label::textColourId, Colours::black);
     label.setJustificationType(juce::Justification::centred);
+    slider.updateOriginalLabelText();
     addAndMakeVisible(label);
 
     attachment = std::make_unique<SliderAttachment>(audioProcessor.apvts, paramName, slider);
 }
+
 
 ResonatorKnobRack::~ResonatorKnobRack()
 {

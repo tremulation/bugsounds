@@ -137,7 +137,7 @@ private:
     void processFirstLayerClicks(VoiceState& voice, double sampleRate, float timingRandomParam,
         const float floorFreq, const float startJitter, const float startFadeout);
     void processSecondLayerClicks(VoiceState& voice);
-    float generateAudioOutput(VoiceState& voice, float clickVolumeParam);
+    float generateAudioOutput(VoiceState& voice);
     void updateSongProgress(VoiceState& voice);
     void updateResonatorProgress(VoiceState& voice);
     float getBaseAngle(float angleScalar, float maxAngle);

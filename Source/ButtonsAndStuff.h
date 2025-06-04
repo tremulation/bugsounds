@@ -12,6 +12,7 @@
 
 #include <JuceHeader.h>
 #include <functional>
+#include "UIDrawer.h "
 
 
 class BugsoundsAudioProcessorEditor;
@@ -23,7 +24,6 @@ public:
 
 
     explicit HelpButton(std::function<void()> onClickCallback) {
-        setLookAndFeel(&laf);
         setClickingTogglesState(false);
         onClick = std::move(onClickCallback);
         10 + 10;
@@ -37,75 +37,36 @@ public:
     juce::String pageID;
 private:
 
-
-    // LookAndFeel that draws a “?” button
-    struct HelpButtonLookAndFeel : public juce::LookAndFeel_V4
-    {
-        void drawButtonBackground(juce::Graphics& g, juce::Button& b, const juce::Colour&, bool, bool) override {
-            auto bounds = b.getLocalBounds().toFloat();
-            g.setColour(b.getToggleState() ? juce::Colours::green : juce::Colours::darkgrey);
-            g.fillRect(bounds);
-            g.setColour(juce::Colours::white);
-            g.drawRect(bounds, 1.0f);
-        }
-
-        void drawButtonText(juce::Graphics& g, juce::TextButton& b, bool, bool) override {
-            g.setColour(juce::Colours::white);
-            auto font = juce::Font(20.0f, juce::Font::bold);
-            g.setFont(font);
-            g.drawText("?", b.getLocalBounds(), juce::Justification::centred);
-        }
-    };
-
-    HelpButtonLookAndFeel laf;
 };
 
 
+class CompileButton : public juce::TextButton, private UIDrawer {
 
-class PowerButtonLookAndFeel : public juce::LookAndFeel_V4 {
-public:
-    void drawToggleButton(juce::Graphics& g, juce::ToggleButton& button,
-        bool shouldDrawButtonAsHighlighted,
-        bool shouldDrawButtonAsDown) override {
+    void paintButton(juce::Graphics& g, bool isMouseOverButton, bool isButtonDown) override
+    {
+        auto bounds = getLocalBounds().toFloat();
+        float scalar = getWidth() / 193.f;
 
+        //draw under button
+        g.setColour(juce::Colour(0xff1B241B));
+        auto bottomRect = bounds.toNearestInt().reduced(2 * scalar).translated(1 * scalar, 1 * scalar);
+        auto topRect = bounds.toNearestInt().reduced(2 * scalar);
+        if (isButtonDown)  topRect = bottomRect;
+        g.fillRect(bottomRect);
 
-        //get the full bounds of the button.
-        auto bounds = button.getLocalBounds().toFloat();
+        //draw the background (c1 and c2 are identical in your example)
+        juce::Colour c1 = juce::Colour::fromString("#818BCA").withAlpha(1.0f);
+        juce::Colour c2 = juce::Colour::fromString("#818BCA").withAlpha(1.0f);
+        
+        drawUIBlock(g, topRect, c1, c2, false, true, scalar);
 
-        //fill the background with green when toggled on, dark grey otherwise.
-        g.setColour(button.getToggleState() ? juce::Colours::green : juce::Colours::darkgrey);
-        g.fillRect(bounds);
-
-        //draw a white border around the button.
-        g.setColour(juce::Colours::white);
-        g.drawRect(bounds, 1.0f);
-
-        //define the icon area with minimal reduction so the circle is as big as possible.
-        auto iconBounds = bounds.reduced(2);
-
-        //calculate the maximum square that fits within iconBounds.
-        float diameter = std::min(iconBounds.getWidth(), iconBounds.getHeight()) * 0.95f; // 95% of available space
-        juce::Rectangle<float> ellipseBounds;
-        ellipseBounds.setSize(diameter, diameter);
-        ellipseBounds.setCentre(iconBounds.getCentre());
-
-        //draw the full circle.
-        g.setColour(juce::Colours::white);
-        g.drawEllipse(ellipseBounds, 2.0f);
-
-
-        float centerX = ellipseBounds.getCentreX();
-        float lineTop = ellipseBounds.getY() - 1.0f;
-        float lineBottom = ellipseBounds.getCentreY();
-
-        //draw the thick line (mask) in the background color.
-        g.setColour(button.getToggleState() ? juce::Colours::green : juce::Colours::darkgrey);
-        float thickLineThickness = 6.0f;  // Increased thickness to fully cover the top stroke.
-        g.drawLine(centerX, lineTop, centerX, lineBottom, thickLineThickness);
-
-        //draw the thinner white line along the same path to create the power symbol's indicator.
-        g.setColour(juce::Colours::white);
-        float thinLineThickness = 2.0f;
-        g.drawLine(centerX, lineTop, centerX, lineBottom, thinLineThickness);
+        //draw the button text in black, centered
+        g.setColour(juce::Colours::black);
+        float fontHeight = 21.f * scalar;
+        g.setFont(UIDrawer::getFontInterBold().withHeight(fontHeight).withExtraKerningFactor(.1f));
+        g.drawFittedText(getButtonText(),
+            topRect,
+            juce::Justification::centred,
+            1);
     }
 };

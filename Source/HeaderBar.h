@@ -15,14 +15,15 @@
 #include "presetPanel.h"
 #include "PresetManager.h" 
 #include "ButtonsAndStuff.h"
-
+#include "UIDrawer.h"
+#include "LogoClickable.h"
 
 class BugsoundsAudioProcessor;
 class BugsoundsAudioProcessorEditor;
 class PresetPanel;
 class PresetManager;
 
-class HeaderBar : public juce::Component
+class HeaderBar : public juce::Component, public UIDrawer
 {
 public:
     HeaderBar(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& editor);
@@ -33,8 +34,9 @@ private:
     BugsoundsAudioProcessor& audioProcessor;
     BugsoundsAudioProcessorEditor& audioEditor;
 
-    juce::ImageComponent logoComponent;
+    LogoClickable logoComponent;
     juce::Label title;
     PresetPanel presetPanel;
     std::unique_ptr<HelpButton> helpButton;
+
 };

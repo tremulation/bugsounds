@@ -16,8 +16,9 @@
 
 SongcodeEditor::SongcodeEditor(const juce::String& title, const juce::String& helpPage, BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& e) : audioProcessor(p), audioEditor(e)
 {
-    //set up title 
-    titleLabel.setFont(juce::Font(16.0f));
+    //set up the rack's title
+    titleLabel.setFont(UIDrawer::getFontInterBold().withHeight(21.0f).withExtraKerningFactor(.1f));
+    titleLabel.setColour(Label::textColourId, Colour::fromString("#000000").withAlpha(1.0f));
     titleLabel.setJustificationType(juce::Justification::left);
     titleLabel.setText(title, juce::dontSendNotification);
     addAndMakeVisible(titleLabel);
@@ -29,8 +30,10 @@ SongcodeEditor::SongcodeEditor(const juce::String& title, const juce::String& he
     mainEditor.setScrollbarsShown(true);
     mainEditor.setCaretVisible(true);
     mainEditor.setPopupMenuEnabled(true);
-    mainEditor.setTextToShowWhenEmpty("Enter your songcode here...", juce::Colours::beige);
-    mainEditor.setColour(juce::TextEditor::outlineColourId, juce::Colours::white);
+    mainEditor.setTextToShowWhenEmpty("Enter your songcode here...", juce::Colours::black);
+    mainEditor.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xffD9D9D9));
+    mainEditor.setColour(juce::TextEditor::textColourId, juce::Colour(0xff000000));
+    mainEditor.setFont(UIDrawer::getFontCode().withHeight(14.f));
 
     //enable text editor listeners
     mainEditor.addListener(this);
@@ -38,8 +41,9 @@ SongcodeEditor::SongcodeEditor(const juce::String& title, const juce::String& he
     addAndMakeVisible(mainEditor);
 
     // Set up the error label. If there's a parsing error it should be displayed here
-    errorLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    errorLabel.setJustificationType(juce::Justification::centred);
+    errorLabel.setColour(Label::textColourId, Colours::black);
+    errorLabel.setJustificationType(juce::Justification::centredBottom);
+    errorLabel.setFont(UIDrawer::getFontInterRegular());
     addAndMakeVisible(errorLabel);
 
     defaultEditorColour = mainEditor.findColour(juce::TextEditor::backgroundColourId);
@@ -64,6 +68,7 @@ SongcodeEditor::SongcodeEditor(const juce::String& title, const juce::String& he
     helpButton = std::make_unique<HelpButton>(
         [this, helpPage] { audioEditor.toggleHelpCompendium(helpPage); });
     addAndMakeVisible(helpButton.get());
+    helpButton->setName(title + "Help");
 }
 
 
@@ -74,22 +79,20 @@ SongcodeEditor::~SongcodeEditor(){
 
 void SongcodeEditor::paint(juce::Graphics& g)
 {
+    auto  bounds = getLocalBounds();
+    float scalar = getHeight() / 180.f;
+    auto  headerBounds = bounds.removeFromTop(38.f * scalar);
+    auto  bodyBounds = bounds;
 
-    auto bounds = getLocalBounds();
-    auto contentBounds = bounds.reduced(5);
-    g.fillAll(defaultBackgroundColour);
+    //header
+    Colour c1 = Colour::fromString("#818BCA").withAlpha(1.0f);
+    Colour c2 = Colour::fromString("#818BCA").withAlpha(1.0f);
+    drawUIBlock(g, headerBounds, c1, c2, false, true, scalar);
 
-    //draw outer white border
-    g.setColour(juce::Colours::white);
-    g.drawRect(contentBounds);
-
-    //draw border under title
-    auto titleBounds = contentBounds.removeFromTop(30);
-    g.drawLine(titleBounds.getX(),
-        titleBounds.getBottom(),
-        titleBounds.getRight(),
-        titleBounds.getBottom(),
-        1.0f);
+    //body
+    c1 = Colour::fromString("#D9D9D9").withAlpha(1.0f);
+    c2 = Colour::fromString("#D9D9D9").withAlpha(1.0f);
+    drawUIBlock(g, bodyBounds, c1, c2, false, true, scalar);
 }
 
 void SongcodeEditor::paintOverChildren(juce::Graphics& g) {
@@ -102,23 +105,37 @@ void SongcodeEditor::paintOverChildren(juce::Graphics& g) {
 
 void SongcodeEditor::resized()
 {
-    auto bounds = getLocalBounds().reduced(5);
+    auto bounds = getLocalBounds();
+    float scalar = getHeight()/ 180.f;
 
     // Position title
-    auto titleHeight = 30;
+    auto titleHeight = 35.f * scalar;
     auto titleBounds = bounds.removeFromTop(titleHeight);
-    titleLabel.setBounds(titleBounds.reduced(5, 0));
+    titleBounds.removeFromLeft(5.f * scalar);
+    titleLabel.setBounds(titleBounds);
+    float titleFontHeight = scalar * 21.f;
+    titleLabel.setFont(UIDrawer::getFontInterBold().withHeight(titleFontHeight).withExtraKerningFactor(.05f));
 
     //add help buton
-    auto helpArea = titleBounds.removeFromRight(titleHeight).reduced(5);
+    auto helpArea = titleBounds.removeFromRight(titleHeight);
     helpButton->setBounds(helpArea);
 
     // Position editor and error label
-    auto errorLabelBounds = bounds.removeFromBottom(15);
-    errorLabelBounds = errorLabelBounds.withTrimmedBottom(5);
+    auto errorLabelBounds = bounds.removeFromBottom(20.f * scalar);
+    errorLabelBounds = errorLabelBounds.withTrimmedBottom(5.f * scalar);
+    const float labelFontSize = 17.f * scalar;
     errorLabel.setBounds(errorLabelBounds);
-    bounds.removeFromBottom(5);
-    mainEditor.setBounds(bounds);
+    errorLabel.setFont(errorLabel.getFont().withHeight(labelFontSize));
+    bounds.removeFromBottom(5 * scalar);
+    mainEditor.setBounds(bounds.withTrimmedLeft(2.f * scalar).withTrimmedRight(2.f * scalar).withTrimmedTop(5.f * scalar));
+
+    //update the size of the existing text in the editor
+    mainEditor.setFont(UIDrawer::getFontCode().withHeight(14.f * scalar));
+    auto currentText = mainEditor.getText();
+    mainEditor.removeListener(this);
+    mainEditor.clear();
+    mainEditor.insertTextAtCaret(currentText);
+    mainEditor.addListener(this);
 }
 
 juce::String SongcodeEditor::getText() const

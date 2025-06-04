@@ -9,11 +9,15 @@
 #include "PipSequencer.h"
 #include "PluginEditor.h"
 
+
+
+
 //----------------------------========== Pip Sequencer ==========----------------------------\\
 
-PipSequencer::PipSequencer(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& editor) : audioProcessor(p), audioEditor(editor){
+PipSequencer::PipSequencer(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& editor) : audioProcessor(p), audioEditor(editor), modeButtonLookAndFeel(*this) {
     //set up title 
-    titleLabel.setFont(juce::Font(16.0f));
+    titleLabel.setFont(UIDrawer::getFontInterBold().withHeight(21.0f * scalar).withExtraKerningFactor(.05f));
+    titleLabel.setColour(Label::textColourId, Colour::fromString("#000000").withAlpha(1.0f));
     titleLabel.setJustificationType(juce::Justification::left);
     titleLabel.setText("Subclick Sequencer", juce::dontSendNotification);
     addAndMakeVisible(titleLabel);
@@ -30,7 +34,7 @@ PipSequencer::PipSequencer(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEd
     createModeButtons();
 
     //setup preview button
-    previewButton.setButtonText("Preview");
+    previewButton.setName("ClickPreview");
     previewButton.onClick = [this] { audioProcessor.triggerPreviewClick(); };
     addAndMakeVisible(previewButton);
 
@@ -39,6 +43,7 @@ PipSequencer::PipSequencer(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEd
 
     helpButton = std::make_unique<HelpButton>(
         [this] { audioEditor.toggleHelpCompendium("subclickSequencer"); });
+    helpButton->setName("SequencerHelp");
     addAndMakeVisible(helpButton.get());
 }
 
@@ -50,51 +55,57 @@ PipSequencer::~PipSequencer() {
 
 void PipSequencer::paint(juce::Graphics& g) {
     //normal stuff -- outline and title underline
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
     auto bounds = getLocalBounds();
-    auto contentBounds = bounds.reduced(5);
+    scalar = getHeight() / 189.f;
 
-    //draw outer white border
-    g.setColour(juce::Colours::white);
-    g.drawRect(contentBounds);
+    auto headerBounds = bounds.removeFromTop(35.f * scalar);
+    auto bodyBounds = bounds;
 
-    //draw border under title
-    auto titleBounds = contentBounds.removeFromTop(30);
-    g.drawLine(titleBounds.getX(),
-        titleBounds.getBottom(),
-        titleBounds.getRight(),
-        titleBounds.getBottom(),
-        1.0f);
+    //headeer
+    Colour c1 = Colour::fromString("#818BCA").withAlpha(1.0f);
+    Colour c2 = Colour::fromString("#818BCA").withAlpha(1.0f);
+    drawUIBlock(g, headerBounds, c1, c2, false, true, scalar);
 
-    //draw border under mode buttons for tabs
-    auto modeButtonBounds = contentBounds.removeFromTop(buttonRowHeight - 5);
-    g.drawRect(modeButtonBounds, 1.0f);
+    //body
+    c1 = Colour::fromString("#D9D9D9").withAlpha(1.0f);
+    c2 = Colour::fromString("#D9D9D9").withAlpha(1.0f);
+    drawUIBlock(g, bodyBounds, c1, c2, false, true, scalar);
+
+    //draw border under mode buttons
+    auto modeButtonBounds = bodyBounds.removeFromTop((buttonRowHeight - 5.f) * scalar);
+    g.drawRect(modeButtonBounds, 1.0f * scalar);
+
 }
 
 
 void PipSequencer::resized() {
-    auto bounds = getLocalBounds().reduced(5);
+    scalar = getHeight() / 189.f;
+    auto bounds = getLocalBounds();
 
-    //position title
-    auto titleHeight = 30;
+    //----------------------- title stuff: buttons and text. ------------------------------
+    auto titleHeight = 35.f * scalar;
     auto titleBounds = bounds.removeFromTop(titleHeight);
-    titleLabel.setBounds(titleBounds.reduced(5, 0));
+    titleBounds.removeFromLeft(5.f * scalar);
+    titleLabel.setBounds(titleBounds);
+    float fontHeight = scalar * 21.f;
+    titleLabel.setFont(UIDrawer::getFontInterBold().withHeight(fontHeight).withExtraKerningFactor(.05f));
 
     //help buton
-    auto helpArea = titleBounds.removeFromRight(titleHeight).reduced(5);
+    auto helpArea = titleBounds.removeFromRight(titleHeight);
     helpButton->setBounds(helpArea);
 
-    //position preview button to the right of the title
-    auto previewButtonWidth = 80;
-    auto previewButtonHeight = titleHeight - 10;
-    auto previewButtonBounds = titleBounds.removeFromRight(previewButtonWidth).reduced(5, 5);
+    //preview button
+    titleBounds.removeFromRight(4.f * scalar);
+    auto previewButtonBounds = titleBounds.removeFromRight(titleHeight);
     previewButton.setBounds(previewButtonBounds);
 
+    //sequence container scroll bar
+    sequenceBox->setSize(sequenceBox->getWidth(), 110 * scalar);
 
     //position mode buttons with spacing
-    auto buttonRow = bounds.removeFromTop(buttonRowHeight);
-    const int horizontalSpacing = 5;  // Space between and around buttons
-    const int verticalSpacing = 5;    // Space above and below buttons
+    auto buttonRow = bounds.removeFromTop(buttonRowHeight * scalar);
+    const int horizontalSpacing = 5.f * scalar;  // Space between and around buttons
+    const int verticalSpacing = 5.f   * scalar;    // Space above and below buttons
 
     // Remove vertical spacing
     // buttonRow.removeFromTop(verticalSpacing);
@@ -105,21 +116,29 @@ void PipSequencer::resized() {
     int buttonWidth = (buttonRow.getWidth() - totalSpacing) / 4;
 
     // Position each button with spacing
-    juce::Font font(16.0f);
+    juce::Font font(16.0f * scalar);
     for (int i = 0; i < 4; i++) {
-        int buttonPadding = 10;  //space to the sides of each text block
+        int buttonPadding = 10.f * scalar;  //space to the sides of each text block
         juce::String buttonText = modeButtons[i]->getButtonText();
         auto textWidth = font.getStringWidth(buttonText);
-        modeButtons[i]->setBounds(buttonRow.removeFromLeft(buttonPadding * 2 + textWidth));
+        modeButtons[i]->setBounds(buttonRow.removeFromLeft((buttonPadding * 2.f + textWidth)));
     }
 
-    bounds.removeFromBottom(4); //space under scrollbar
+    bounds.removeFromBottom(4.f * scalar); //space under scrollbar
 
-    //position viewport below the buttons
-    viewport->setBounds(bounds.reduced(1, 0));
+   
+    viewport->setBounds(bounds.reduced(1.f * scalar, scalar));
+
+
+    auto* content = viewport->getViewedComponent();
+    if (content != nullptr)
+    {
+        content->setTransform(juce::AffineTransform::scale(scalar, scalar));
+    }
 
     //set sequence box size, keeping original height
-    sequenceBox->setSize(sequenceBox->getMinimumWidth(), bounds.getHeight() - 4);   //second arg-- space btw scroll bar and pips
+    //OK to use non-scaling vals here. the transofrm will handle it
+    sequenceBox->setSize(sequenceBox->getMinimumWidth(), 110);   //second arg-- space btw scroll bar and pips
 }
 
 
@@ -199,17 +218,18 @@ void PipSequencer::createInlineEditor(PipBar::PipBarArea* pba, juce::Point<int> 
     inlineEditor = std::make_unique<juce::TextEditor>();
     addAndMakeVisible(inlineEditor.get());
 
+    //position above click point
+    const int editorWidth = 70.f * scalar;
+    const int editorHeight = 20.f * scalar;
+    editorPos = editorPos.withY(editorPos.getY() - editorHeight - 5);  //5px gap
+
     //setup inline editor appearance
+    inlineEditor->setFont(UIDrawer::getFontCode().withHeight(15 * scalar));
     inlineEditor->setText(juce::String(pba->getValue(), 2));
     inlineEditor->setJustification(juce::Justification::centred);
-    inlineEditor->setColour(juce::TextEditor::backgroundColourId, getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-    inlineEditor->setColour(juce::TextEditor::outlineColourId, juce::Colours::white);
+    inlineEditor->setColour(juce::TextEditor::backgroundColourId, Colour::fromString("#163359").withAlpha(1.0f));
+    inlineEditor->setColour(juce::TextEditor::outlineColourId, Colour::fromString("#163359").withAlpha(1.0f));
     inlineEditor->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::white);
-
-    //position above click point
-    const int editorWidth = 60;
-    const int editorHeight = 20;
-    editorPos = editorPos.withY(editorPos.getY() - editorHeight - 5);  //5px gap
 
     //keep editor within component bounds
     int minX = 0;
@@ -345,22 +365,28 @@ SequenceBox::SequenceBox(PipSequencer& p) : parent(p) {
 SequenceBox::~SequenceBox() = default;
 
 
-void SequenceBox::paint(juce::Graphics& g)
-{
-    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
+void SequenceBox::paint(juce::Graphics& g) {
+    float scale = parent.scalar;
 
-    if (selectedPipBar != nullptr)
-    {
+    if (selectedPipBar != nullptr) {
+
+        /*auto barBounds = juce::Rectangle<int>(
+            bounds.getX(),
+            bounds.getBottom() - std::max(barHeight * scalar, minHeight * scalar),
+            bounds.getWidth(),
+            std::max(barHeight * scalar, minHeight * scalar)
+        );*/
         //get the bounds of the selected PipBarArea
-        auto pipBarBounds = selectedPipBar->getBounds().toFloat();
+        Rectangle<int> pipBarBounds = selectedPipBar->innerBarRectangle;
 
         //calculate the base area
-        auto highlightBounds = pipBarBounds.withTrimmedLeft((pipSpacing / 2) - 1).withTrimmedRight((pipSpacing / 2) - 1);
-        highlightBounds.removeFromTop(selectedPipBar->pipBarArea.maxHeight - selectedPipBar->pipBarArea.currentHeight + pipValueLabelHeight);
+        Rectangle<int> highlightBounds = pipBarBounds;
+        float centreX = selectedPipBar->getX() + 10.f;
+        highlightBounds.translate(centreX, 0);
 
         //draw drop shadow
         juce::DropShadow dropShadow(juce::Colours::blue, 5, juce::Point<int>(0, 0));
-        dropShadow.drawForRectangle(g, highlightBounds.toNearestInt());
+        dropShadow.drawForRectangle(g, highlightBounds);
 
         //draw a subtle outline
         g.setColour(juce::Colours::blue.withAlpha(0.4f));
@@ -369,15 +395,12 @@ void SequenceBox::paint(juce::Graphics& g)
 }
 
 
-
-
-
 void SequenceBox::resized() {
     auto bounds = getLocalBounds();
     bounds.removeFromBottom(scrollBarHeight);   
     bounds.removeFromTop(buttonRowHeight);     
     //position add button
-    float buttonSize = 30.0f;
+    float buttonSize = 35.0f;
     float xPos = pipBars.size() * (pipWidth + pipSpacing) + pipSpacing + pipSpacing/4;
 
     addButton.setBounds(xPos,
@@ -391,7 +414,7 @@ void SequenceBox::resized() {
 
 
 int SequenceBox::getMinimumWidth() const {
-    return (pipBars.size() * (pipWidth + pipSpacing) + pipSpacing * 3 );  // for add button and some padding
+    return (pipBars.size() * (pipWidth + pipSpacing) + pipSpacing * 3 ) * parent.scalar;  // for add button and some padding
 }
 
 
@@ -476,9 +499,7 @@ bool SequenceBox::keyPressed(const juce::KeyPress& key, juce::Component* origina
 }
 
 
-
-void SequenceBox::deleteSelectedPipBar()
-{
+void SequenceBox::deleteSelectedPipBar(){
     if (selectedPipBar != nullptr)
     {
         auto it = std::find_if(pipBars.begin(), pipBars.end(),
@@ -523,6 +544,7 @@ void PipBar::resized() {
     //reserve space for text at the top
     pipBarArea.setBounds(bounds);
     pipBarArea.maxHeight = pipBarArea.getHeight() - pipValueLabelHeight;
+
 }
 
 
@@ -536,7 +558,6 @@ void PipBar::paint(juce::Graphics& g) {
     //calculate the text bounds to ensure it's not clipped
     pipBarArea.updateBarHeight();
 
-
     // Calculate text bounds based on current animated heights
     float currentTotalHeight = pipBarArea.isAnimating() ?
         currentTextHeight + pipBarArea.currentHeight :
@@ -548,8 +569,8 @@ void PipBar::paint(juce::Graphics& g) {
     }
 
     // Text
-    g.setFont(textHeight);
-    g.setColour(juce::Colours::white);
+    g.setFont(UIDrawer::getFontInterRegular().withHeight(textHeight * 1.2));
+    g.setColour(juce::Colours::black);
     g.drawText(valueText, textBounds, juce::Justification::centred);
 }
 
@@ -628,14 +649,13 @@ void PipBar::PipBarArea::paint(juce::Graphics& g)
         std::max(barHeight, minHeight)
     );
 
-    //outline
-    g.setColour(juce::Colours::blue.darker(0.2f));
-    g.fillRect(barBounds);
+    parentBar.innerBarRectangle = barBounds;
 
-    //main bar (slightly inset)
-    g.setColour(juce::Colours::blue);
-    g.fillRect(barBounds.reduced(outlineThickness));
+    Colour c1 = Colour::fromString("#7BADBC").withAlpha(1.0f);
+    Colour c2 = Colour::fromString("#89AEDE").withAlpha(1.0f);
+    drawUIBlock(g, barBounds, c1, c2, false, false, .5f);
 }
+
 
 
 void PipBar::PipBarArea::updateBarHeight() {
@@ -866,4 +886,92 @@ void PipBar::PipBarArea::focusLost(FocusChangeType cause) {
         SequenceBox* sq = parentBar.findParentComponentOfClass<SequenceBox>();
         sq->setSelectedPipBar(nullptr);
     }
+}
+
+
+//----------------------------========== Tab Buttons LNF ==========----------------------------\\
+
+TabStyleLookAndFeel::TabStyleLookAndFeel(PipSequencer& p) : parent(p) {
+
+}
+
+
+void TabStyleLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
+    const juce::Colour& backgroundColour,
+    bool shouldDrawButtonAsHighlighted,
+    bool shouldDrawButtonAsDown)
+{
+    //set up measurements for each part in advance
+    bool isSelected = button.getToggleState();
+    float scalar = parent.scalar;
+    Rectangle<int> boundingBox;
+    Rectangle<int> originalBox;
+    Rectangle<int> leftShadowBox;
+    Rectangle<int> rightShadowBox;
+    Rectangle<int> highlightBox;
+    if (isSelected) {
+        boundingBox = button.getLocalBounds();
+    } else {
+        boundingBox = button.getLocalBounds().withTrimmedTop(4.f * scalar);
+    }
+    originalBox = boundingBox;
+    leftShadowBox = boundingBox.removeFromLeft(4.f * scalar).withTrimmedRight(1.f * scalar);
+    rightShadowBox = boundingBox.removeFromRight(4.f * scalar).withTrimmedRight(1.f * scalar);
+    highlightBox = { originalBox.getX() + int(4.f * scalar),
+                     originalBox.getY() + int(3.f * scalar),
+                     originalBox.getWidth() - int(5.f * scalar),
+                     int(1.f * scalar)};
+
+    leftShadowBox.removeFromBottom(1.0f * scalar);
+    rightShadowBox.removeFromBottom(2.0f * scalar);
+    rightShadowBox.removeFromTop(1.f * scalar);
+    if (isSelected) rightShadowBox.removeFromTop(1.0f * scalar);
+    //no bottom shadow
+
+     //outline
+    g.setColour(Colour::fromString("#163359").withAlpha(1.0f));
+    g.drawRect(originalBox, (int)(scalar * 1.f));
+
+    //erase the bottom line of the outline on the selected tab so it looks connected to the main editor
+    if (isSelected) {
+        g.setColour(Colour::fromString("#d9d9d9").withAlpha(1.f));
+        g.fillRect(
+            ((float) originalBox.getX() + 3.f * scalar),
+            (originalBox.getBottom() - 1 * scalar),
+            ((float)originalBox.getWidth() - 4.f * scalar),
+            1.f * scalar
+        );
+    }
+
+    g.setColour(Colour::fromString("#FFFFFF").withAlpha(.76f));
+    g.fillRect(highlightBox);
+
+    g.setColour(Colour::fromString("#163359").withAlpha(.5f));
+    g.fillRect(leftShadowBox);
+
+    g.setColour(Colour::fromString("#70AAF5").withAlpha(.67f));
+    g.fillRect(rightShadowBox.translated(0, 1.f * scalar));
+
+
+}
+
+
+
+juce::Font TabStyleLookAndFeel::getTextButtonFont(juce::TextButton&, int buttonHeight) { return juce::Font(13.f * parent.scalar); }
+
+
+
+void TabStyleLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+{
+    auto font = getTextButtonFont(button, button.getHeight());
+    g.setFont(font);
+    g.setColour(Colour::fromString("#000000").withAlpha(1.0f)
+        .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f));
+
+    auto yOffset = button.getToggleState() ? 0.0f : 2.0f;  // 2px lower if not selected
+    auto textBounds = button.getLocalBounds();
+    textBounds.translate(0, (int)yOffset);
+
+    g.drawText(button.getButtonText(), textBounds,
+        juce::Justification::centred, false);
 }

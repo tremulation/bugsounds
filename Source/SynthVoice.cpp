@@ -95,7 +95,6 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
 
     const auto sampleRate = getSampleRate();
     const float timingRandomParam = *apvts->getRawParameterValue("Click Timing Random");
-    const float clickVolumeParam  = *apvts->getRawParameterValue("Click Volume");
     const int numChannels  = outputBuffer.getNumChannels();
     const bool resonatorOn = *apvts->getRawParameterValue("Resonator On");
 
@@ -146,7 +145,7 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
         for (int sampleIdx = 0; sampleIdx < numSamples; ++sampleIdx) {
             processFirstLayerClicks(*voice, sampleRate, timingRandomParam, floorFreq, startJitter, startFadeout);
             processSecondLayerClicks(*voice);
-            float voiceOutput = generateAudioOutput(*voice, clickVolumeParam); //resonator handled in this function
+            float voiceOutput = generateAudioOutput(*voice); //resonator handled in this function
             updateSongProgress(*voice);  //also handles switch ending song/switching from playing to cooldown
             updateResonatorProgress(*voice);
 
@@ -370,7 +369,7 @@ void SynthVoice::processSecondLayerClicks(VoiceState& voice) {
 //===============================================================================
 
 
-float SynthVoice::generateAudioOutput(VoiceState& voice, float clickVolumeParam) {
+float SynthVoice::generateAudioOutput(VoiceState& voice) {
     float output = 0.0f;
 
     for (auto& subClick : voice.activeSubClicks) {
@@ -393,8 +392,7 @@ float SynthVoice::generateAudioOutput(VoiceState& voice, float clickVolumeParam)
         subClick.samplesRemaining--;
 
         //add this subclick to the output
-        float volumeGain = juce::Decibels::decibelsToGain(clickVolumeParam);
-        output += oscValue * subClick.curLevel * volumeGain;
+        output += oscValue * subClick.curLevel;
     }
 
     //remove finished subclicks with an iterator

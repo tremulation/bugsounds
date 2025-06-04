@@ -56,9 +56,6 @@ public:
                     samplesUntilNextSubClick = (delay > 0) ? delay : 1;
                     currentPipIndex++;
 
-                    //this is never called. why?
-                    juce::Logger::writeToLog("created a new pip");
-
                     // End preview scheduling when all pips have been spawned.
                     if (currentPipIndex >= static_cast<int>(pips.size())) {
                         previewActive = false;
@@ -80,11 +77,10 @@ public:
 
     float renderActiveSubClicks() {
         double output = 0.0;
-        std::vector<int> clicksToRemove;
 
         for (size_t i = 0; i < activeSubClicks.size(); ++i) {
             auto& click = activeSubClicks[i];
-            // Render the click audio only.
+            //render the click audio only.
             float oscVal = std::sin(click.phase * 2.0 * juce::MathConstants<double>::pi);
             click.phase += click.frequency / currentSampleRate;
             if (click.phase >= 1.0)
@@ -96,20 +92,17 @@ public:
             click.curLevel += click.levelChangePerSample;
             output += oscVal * click.curLevel;
             click.samplesRemaining--;
-
-            if (click.samplesRemaining <= 0) {
-                clicksToRemove.push_back(i);
-            }
         }
 
         // Remove finished subclicks.
-        activeSubClicks.erase(
-            std::remove_if(activeSubClicks.begin(), activeSubClicks.end(),
-                [](const auto& click) {
-                    return click.samplesRemaining <= 0;
-                }),
-            activeSubClicks.end()
-        );
+        for (auto it = activeSubClicks.begin(); it != activeSubClicks.end();) {
+            if (it->samplesRemaining <= 0) {
+                //erase returns the next valid iterator
+                it = activeSubClicks.erase(it);             }
+            else {
+                ++it;
+            }
+        }
 
         return static_cast<float>(output);
     }

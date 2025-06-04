@@ -13,6 +13,7 @@
 #include <JuceHeader.h>
 #include "Evaluator.h"
 #include "ButtonsAndStuff.h"
+#include "UIDrawer.h"
 
 struct ErrorInfo;
 
@@ -22,7 +23,8 @@ class BugsoundsAudioProcessorEditor;
 
 class SongcodeEditor : public juce::Component,
                        public juce::TextEditor::Listener,
-                       public juce::ChangeListener
+                       public juce::ChangeListener,
+                       private UIDrawer
 {
     public:
         SongcodeEditor(const juce::String& title, const juce::String& helpPage, BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& e);

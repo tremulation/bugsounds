@@ -10,10 +10,12 @@
 #include "PipStructs.h"
 #include "PluginProcessor.h"
 #include "ButtonsAndStuff.h"
+#include "UIDrawer.h"
 
 class PipBar;
 struct PipBarArea;
 class SequenceBox;
+class PipSequencer;
 
 class BugsoundsAudioProcessorBugsoundsAudioProcessor;
 class BugsoundsAudioProcessorEditor;
@@ -30,70 +32,16 @@ const int DEFAULT_TEXT_HEIGHT = 12;
 
 class TabStyleLookAndFeel : public juce::LookAndFeel_V4 {
 public:
-    TabStyleLookAndFeel() {
-        setColour(juce::TextButton::buttonColourId, juce::Colours::grey);
-    }
+    TabStyleLookAndFeel(PipSequencer& p);
 
-    void drawButtonBackground(juce::Graphics& g, juce::Button& button,
-        const juce::Colour& backgroundColour,
-        bool shouldDrawButtonAsHighlighted,
-        bool shouldDrawButtonAsDown) override
-    {
-        auto bounds = button.getLocalBounds().toFloat();
-        auto baseColour = backgroundColour;
+    void drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour,
+        bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 
-        // Determine if button is selected
-        bool isSelected = button.getToggleState();
+    juce::Font getTextButtonFont(juce::TextButton&, int buttonHeight);
 
-        if (isSelected) {
-            // Selected tab appearance
-            g.setColour(baseColour);
-            g.fillRect(bounds);
-
-            // Draw borders on three sides only (left, top, right)
-            g.setColour(juce::Colours::white);
-            g.drawRect(bounds, 1.0f);
-
-            // Extend the fill slightly below to cover the border of the sequenceBox
-            g.setColour(baseColour);
-            g.fillRect(bounds.getX() + 1, bounds.getBottom() - 1, bounds.getWidth() - 2, 2.0f);
-        }
-        else {
-            // Unselected tab appearance
-            auto darkerColor = baseColour.darker(0.2f);
-            auto reducedBounds = bounds.withTrimmedTop(4);
-            g.setColour(darkerColor);
-            g.fillRect(reducedBounds);
-
-            // Draw all borders for unselected tabs
-            g.setColour(juce::Colours::white);
-            g.drawRect(reducedBounds, 1.0f);
-
-            // Add subtle inner shadow for recessed effect
-            g.setColour(juce::Colours::black.withAlpha(0.1f));
-            g.drawHorizontalLine(1, reducedBounds.getX() + 1, reducedBounds.getRight() - 1);
-            g.drawVerticalLine(1, reducedBounds.getY() + 1, reducedBounds.getBottom() - 1);
-        }
-    }
-
-    juce::Font getTextButtonFont(juce::TextButton&, int buttonHeight) { return juce::Font(13.f); }
-
-    void drawButtonText(juce::Graphics& g, juce::TextButton& button,
-        bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
-    {
-        auto font = getTextButtonFont(button, button.getHeight());
-        g.setFont(font);
-        g.setColour(button.findColour(button.getToggleState() ? juce::TextButton::textColourOnId
-            : juce::TextButton::textColourOffId)
-            .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f));
-
-        auto yOffset = button.getToggleState() ? 0.0f : 2.0f;  // 2px lower if not selected
-        auto textBounds = button.getLocalBounds();
-        textBounds.translate(0, (int)yOffset);
-
-        g.drawText(button.getButtonText(), textBounds,
-            juce::Justification::centred, false);
-    }
+    void drawButtonText(juce::Graphics& g, juce::TextButton& button, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
+private:
+    PipSequencer& parent;
 };
 
 
@@ -117,8 +65,10 @@ public:
     bool selected = true;
     void changeMode(enum EditingMode newMode);
 
+    juce::Rectangle<int> innerBarRectangle;
+
     //inner class that handles all mouse events, and draws the bar
-    struct PipBarArea : public juce::Component, public juce::Timer {
+    struct PipBarArea : public juce::Component, public juce::Timer, public UIDrawer {
         PipBarArea(PipBar& parent);
         void paint(juce::Graphics&) override;
         void resized() override;
@@ -141,6 +91,7 @@ public:
 
         float currentHeight;
         float targetHeight;
+        
     private:
         
         bool isDragging = false;
@@ -157,7 +108,7 @@ private:
 
 //MAIN CLASS
 //the main UI component that contains all the different elements of the pip sequencer
-class PipSequencer : public juce::Component, public juce::ChangeListener
+class PipSequencer : public juce::Component, public juce::ChangeListener, public::UIDrawer
 {
 public:
     PipSequencer(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEditor& editor);
@@ -177,6 +128,7 @@ public:
     }
 
     enum EditingMode mode = EditingMode::FREQUENCY;
+    float scalar = 1.0f;
 private:
     void loadPipsFromProcessor();
     juce::Label titleLabel;

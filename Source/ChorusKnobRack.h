@@ -13,13 +13,15 @@
 #include <JuceHeader.h>
 #include "ChorusPositionReadout.h"
 #include "ButtonsAndStuff.h"
+#include "AnimatedKnob.h"
+#include "UIDrawer.h"
 
 class BugsoundsAudioProcessor;
 class BugsoundsAudioProcessorEditor;
 
 
 //==============================================================================
-class ChorusKnobRack : public juce::Component {
+class ChorusKnobRack : public juce::Component, public UIDrawer {
 public:
     ChorusKnobRack(BugsoundsAudioProcessor& processor, BugsoundsAudioProcessorEditor& editor);
     ~ChorusKnobRack() override;
@@ -32,17 +34,17 @@ private:
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
 
-    void initializeKnob(juce::Slider& slider, juce::Label& label,
-        const juce::String& labelText,
-        const juce::String& paramName,
-        std::unique_ptr<SliderAttachment>& attachment);
-
     // Member variables
     const int margin = 5;
-    juce::Slider countKnob, spreadKnob, distanceKnob, cooldownKnob, correlationKnob;
+    
     juce::Label countLabel, spreadLabel, distanceLabel, cooldownLabel, correlationLabel;
 
-    PowerButtonLookAndFeel powerButtonLAF;
+    AnimatedKnobSlider countKnob{ countLabel };
+    AnimatedKnobSlider spreadKnob{ spreadLabel };
+    AnimatedKnobSlider distanceKnob{ distanceLabel };
+    AnimatedKnobSlider cooldownKnob{ cooldownLabel };
+    AnimatedKnobSlider correlationKnob{ correlationLabel };
+
     std::unique_ptr<juce::ToggleButton> powerButton;
     std::unique_ptr<HelpButton>         helpButton;
 
@@ -60,27 +62,37 @@ private:
     BugsoundsAudioProcessor& audioProcessor;
     BugsoundsAudioProcessorEditor& audioEditor;
 
+    void initializeKnob(AnimatedKnobSlider& slider, juce::Label& label, const juce::String& labelText, const juce::String& paramName, std::unique_ptr<SliderAttachment>& attachment);
 
     class RandomizeButtonLookAndFeel : public juce::LookAndFeel_V4
     {
     public:
         void drawButtonBackground(juce::Graphics& g, juce::Button& button,
             const juce::Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
-        {
-            auto bounds = button.getLocalBounds().toFloat();
-            g.setColour(button.getToggleState() ? juce::Colours::green : juce::Colours::darkgrey);
-            g.fillRect(bounds);
-
-            g.setColour(juce::Colours::white);
-            g.drawRect(bounds, 1.0f);
+        { 
+            float scale = button.getWidth() / 15.f;
+            float padding = 1 * scale;
+            g.setColour(Colour::fromString("#1B241B").withAlpha(1.0f));
+            Rectangle<float> topRect = button.getLocalBounds().toFloat().reduced(padding).translated(-1.f * scale, -1.f * scale);
+            Rectangle<float> bottomRect = button.getLocalBounds().toFloat().reduced(padding);
+            if (!shouldDrawButtonAsDown) {
+                g.fillRect(topRect);
+                g.fillRect(bottomRect);
+            } else {
+                g.fillRect(bottomRect);
+            }
         }
 
-        void drawButtonText(juce::Graphics& g, juce::TextButton& button, bool /*shouldDrawButtonAsHighlighted*/, bool /*shouldDrawButtonAsDown*/) override
+        void drawButtonText(juce::Graphics& g, juce::TextButton& button, bool /*shouldDrawButtonAsHighlighted*/, bool shouldDrawButtonAsDown) override
         {
-            auto font = juce::Font(20.0f, juce::Font::bold);
-            g.setFont(font);
+            float scale = button.getWidth() / 15.f;
+            float padding = 1 * scale;
             g.setColour(juce::Colours::white);
-            g.drawText("R", button.getLocalBounds(), juce::Justification::centred);
+            if (!shouldDrawButtonAsDown) {
+                g.drawText("R", button.getLocalBounds().reduced(padding).translated(-1.f * scale, -1.f * scale), juce::Justification::centred);
+            } else {
+                g.drawText("R", button.getLocalBounds().reduced(padding), juce::Justification::centred);
+            }
         }
     };
 

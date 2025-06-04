@@ -19,11 +19,15 @@
 #include "HeaderBar.h"
 #include "ChorusKnobRack.h"
 #include "HelpCompendium.h"
+#include "CustomLookAndFeel.h"
+#include "Crebits.h"
+#include "ButtonsAndStuff.h"
+#include "LevelMeter.h"
 
 //==============================================================================
 /**
 */
-class BugsoundsAudioProcessorEditor  : public juce::AudioProcessorEditor
+class BugsoundsAudioProcessorEditor  : public juce::AudioProcessorEditor, public Timer
 {
 public:
     BugsoundsAudioProcessorEditor (BugsoundsAudioProcessor&);
@@ -36,8 +40,10 @@ public:
     void disableResonatorEditor();
     void enableResonatorEditor();
     void toggleHelpCompendium(juce::String pageId);
+    void showCreditsWindow();
 
 private:
+    void timerCallback() override;
 
     const int baseWidth = 800;
     const int baseHeight = 640;
@@ -47,15 +53,21 @@ private:
     // access the processor object that created it.
     BugsoundsAudioProcessor& audioProcessor;
 
+    CustomLookAndFeel myCustomLNF;
+
+    std::unique_ptr<Crebits> creditsOverlay;
+    std::unique_ptr<ClickBlocker> blocker;
+
     PipSequencer pipSequencer;
     SongcodeEditor frequencyEditor;
     SongcodeEditor resonatorEditor;
-    juce::TextButton testButton;
+    CompileButton testButton;
     ClickSettingsKnobRack clickSettingsRack; 
     ResonatorKnobRack resonatorKnobRack;
 	ChorusKnobRack chorusKnobRack;
     HeaderBar headerBar;
     HelpCompendium helpCompendium;
+    LevelMeter levelMeter;
 
     void freqCodeEditorHasChanged();
     void resonatorCodeEditorHasChanged();

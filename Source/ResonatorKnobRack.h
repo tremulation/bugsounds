@@ -2,6 +2,8 @@
 
 #include <JuceHeader.h>
 #include "ButtonsAndStuff.h"
+#include "UIDrawer.h"
+#include "AnimatedKnob.h"
 
 // Forward declarations
 class BugsoundsAudioProcessor;
@@ -9,7 +11,7 @@ class BugsoundsAudioProcessorEditor;
 
 
 //==============================================================================
-class ResonatorKnobRack : public juce::Component {
+class ResonatorKnobRack : public juce::Component, public UIDrawer {
 public:
     ResonatorKnobRack(BugsoundsAudioProcessor& processor, BugsoundsAudioProcessorEditor& editor);
     ~ResonatorKnobRack() override;
@@ -26,20 +28,21 @@ private:
 
     //void paintOverChildren(juce::Graphics& g) override;
 
-    void initializeKnob(juce::Slider& slider, juce::Label& label,
-        const juce::String& labelText,
-        const juce::String& paramName,
-        std::unique_ptr<SliderAttachment>& attachment);
+    void initializeKnob(AnimatedKnobSlider& slider, juce::Label& label, const juce::String& labelText, const juce::String& paramName, std::unique_ptr<SliderAttachment>& attachment);
+
 
     // Member variables
     const int margin = 5;
 
     // --- Top row knobs ---
     // These will control Bandwidth, Gain, and overtoneNum
-    juce::Slider resonatorQKnob, resonatorGainKnob, resonatorOvertoneKnob, resonatorDecayKnob, resonatorOriginalMixKnob;
-    juce::Label qLabel, gainLabel, mixLabel, overtoneLabel, oDecayLabel, originalMixLabel;
+    juce::Label qLabel, gainLabel, overtoneLabel, oDecayLabel, originalMixLabel;
+    AnimatedKnobSlider resonatorQKnob{ qLabel };
+    AnimatedKnobSlider resonatorGainKnob{ gainLabel };
+    AnimatedKnobSlider resonatorOriginalMixKnob{ originalMixLabel };
+    AnimatedKnobSlider resonatorOvertoneKnob{ overtoneLabel };
+    AnimatedKnobSlider resonatorDecayKnob{ oDecayLabel };
 
-    PowerButtonLookAndFeel powerButtonLAF;
     std::unique_ptr<juce::ToggleButton> powerButton;
     std::unique_ptr<HelpButton>         helpButton;
 

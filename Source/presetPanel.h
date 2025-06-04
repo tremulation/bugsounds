@@ -48,13 +48,25 @@ public:
 	}
 
 	void resized() override {
-		const auto container = getLocalBounds().reduced(4);
-		auto bounds = container;
-		saveButton.setBounds(bounds.removeFromLeft(container.proportionOfWidth(0.2f)).reduced(4));
-		previousPresetButton.setBounds(bounds.removeFromLeft(container.proportionOfWidth(0.1f)).reduced(4));
-		presetList.setBounds(bounds.removeFromLeft(container.proportionOfWidth(0.4f)).reduced(4));
-		nextPresetbutton.setBounds(bounds.removeFromLeft(container.proportionOfWidth(0.1f)).reduced(4));
-		deleteButton.setBounds(bounds.reduced(4));
+		//----------------------- set us scalings.  --------------------- 
+		int scale = getHeight() / 40.f;	//default height is 40
+		int horizontalPadding = 2.f * scale;	//4 px padding between each button
+		int buttonSize = (int) getHeight(); //buttons handle their own padding now
+		auto area = getLocalBounds();
+
+		//-------------------- buttons to the left. ---------------------
+		saveButton.setBounds(area.removeFromLeft(buttonSize));
+		previousPresetButton.setBounds(area.removeFromLeft(buttonSize));
+		area.removeFromLeft(horizontalPadding);
+
+		//-------------------- buttons to the right. --------------------
+		deleteButton.setBounds(area.removeFromRight(buttonSize));
+		nextPresetbutton.setBounds(area.removeFromRight(buttonSize));
+		area.removeFromLeft(horizontalPadding);
+		
+		//-------------------- preset list in the middle. --------------------
+		//should just be the leftover space
+		presetList.setBounds(area);
 	}
 private:
 
@@ -81,6 +93,7 @@ private:
 			presetList.setSelectedItemIndex(index, juce::dontSendNotification);
 		}
 		if (button == &deleteButton) {
+			//TODO find a way to scale the alertWindow
 			juce::AlertWindow::showAsync(
 				juce::MessageBoxOptions()
 				.withIconType(juce::MessageBoxIconType::QuestionIcon)
@@ -107,7 +120,7 @@ private:
 	}	
 
 	void configureButton(juce::TextButton& button, const juce::String& buttonText) {
-		button.setButtonText(buttonText);
+		button.setName(buttonText);
 		button.setMouseCursor(juce::MouseCursor::PointingHandCursor);
 		addAndMakeVisible(button);
 		button.addListener(this);

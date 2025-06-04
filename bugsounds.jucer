@@ -2,15 +2,58 @@
 
 <JUCERPROJECT id="yTOXQh" name="bugsounds" projectType="audioplug" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
-              includeBinaryInJuceHeader="1" binaryDataNamespace="BinData">
+              includeBinaryInJuceHeader="1" binaryDataNamespace="BinData" companyWebsite="www.github.com/tremulation"
+              pluginDesc="experimental bug-based synthesizer for use in music and sound design"
+              pluginManufacturer="Tremulation" pluginManufacturerCode="Bug1"
+              pluginCode="Bug1">
   <MAINGROUP id="RIYwew" name="bugsounds">
     <GROUP id="{28D391B9-8AA7-A9B0-B4E4-937980DDCF90}" name="Source">
+      <FILE id="UBnl3u" name="AnimatedLevelSlider.h" compile="0" resource="0"
+            file="Source/AnimatedLevelSlider.h"/>
+      <FILE id="UcsPAe" name="LevelMeter.cpp" compile="1" resource="0" file="Source/LevelMeter.cpp"/>
+      <FILE id="Y1pAEp" name="LevelMeter.h" compile="0" resource="0" file="Source/LevelMeter.h"/>
+      <FILE id="X5ATrn" name="HelpCompendium.cpp" compile="1" resource="0"
+            file="Source/HelpCompendium.cpp"/>
       <GROUP id="{3B7C8EA6-E2FB-5BCE-0E47-74F230B5136B}" name="Graphics">
+        <FILE id="VirVoE" name="add.svg" compile="0" resource="1" file="Source/Graphics/add.svg"/>
+        <FILE id="wsIRbc" name="arrow_left.svg" compile="0" resource="1" file="Source/Graphics/arrow_left.svg"/>
+        <FILE id="sBJnaK" name="arrow_right.svg" compile="0" resource="1" file="Source/Graphics/arrow_right.svg"/>
+        <FILE id="qF10Rs" name="AzeretMono-Regular.ttf" compile="0" resource="1"
+              file="Source/Graphics/AzeretMono-Regular.ttf"/>
         <FILE id="PPJPZ6" name="bglogo1.png" compile="0" resource="1" file="Source/Graphics/bglogo1.png"/>
         <FILE id="qHWdwo" name="bglogo2.png" compile="0" resource="1" file="Source/Graphics/bglogo2.png"/>
         <FILE id="NgbIOO" name="bglogo3.png" compile="0" resource="1" file="Source/Graphics/bglogo3.png"/>
+        <FILE id="JudLW0" name="help.svg" compile="0" resource="1" file="Source/Graphics/help.svg"/>
+        <FILE id="ms3wIs" name="Inter_24pt-Black.ttf" compile="0" resource="1"
+              file="Source/Graphics/Inter_24pt-Black.ttf"/>
+        <FILE id="kOQkal" name="Inter_24pt-Bold.ttf" compile="0" resource="1"
+              file="Source/Graphics/Inter_24pt-Bold.ttf"/>
+        <FILE id="U0y6XW" name="Inter_24pt-Regular.ttf" compile="0" resource="1"
+              file="Source/Graphics/Inter_24pt-Regular.ttf"/>
+        <FILE id="pR4ilr" name="logoCredits.png" compile="0" resource="1" file="Source/Graphics/logoCredits.png"/>
+        <FILE id="OI0Io9" name="meterbar.svg" compile="0" resource="1" file="Source/Graphics/meterbar.svg"/>
+        <FILE id="H3uKjY" name="meterslider.svg" compile="0" resource="1" file="Source/Graphics/meterslider.svg"/>
+        <FILE id="mZ9qzJ" name="minimize.svg" compile="0" resource="1" file="Source/Graphics/minimize.svg"/>
+        <FILE id="uxzV9v" name="power.svg" compile="0" resource="1" file="Source/Graphics/power.svg"/>
+        <FILE id="l4MPda" name="preview.svg" compile="0" resource="1" file="Source/Graphics/preview.svg"/>
+        <FILE id="ImgUja" name="randomize.svg" compile="0" resource="1" file="Source/Graphics/randomize.svg"/>
+        <FILE id="QVv6Kd" name="samknob_1.svg" compile="0" resource="1" file="Source/Graphics/samknob_1.svg"/>
+        <FILE id="EeQV8e" name="samknob_1_full.svg" compile="0" resource="1"
+              file="Source/Graphics/samknob_1_full.svg"/>
+        <FILE id="zsXxAP" name="samknob_2_inner_lighting.svg" compile="0" resource="1"
+              file="Source/Graphics/samknob_2_inner_lighting.svg"/>
+        <FILE id="RYjqcR" name="samknob_2_static.svg" compile="0" resource="1"
+              file="Source/Graphics/samknob_2_static.svg"/>
+        <FILE id="zNtqJs" name="samknob_rotators.svg" compile="0" resource="1"
+              file="Source/Graphics/samknob_rotators.svg"/>
+        <FILE id="xVyesq" name="samknob_static.svg" compile="0" resource="1"
+              file="Source/Graphics/samknob_static.svg"/>
+        <FILE id="D7kKQl" name="save.svg" compile="0" resource="1" file="Source/Graphics/save.svg"/>
+        <FILE id="bzQgQl" name="trash.svg" compile="0" resource="1" file="Source/Graphics/trash.svg"/>
       </GROUP>
       <GROUP id="{4B1E7E85-602F-7445-F196-25C929965A9D}" name="HelpPages">
+        <FILE id="AFMRxo" name="CustomLookAndFeel.cpp" compile="1" resource="0"
+              file="Source/CustomLookAndFeel.cpp"/>
         <FILE id="MrlXAJ" name="bugSoundsHelp.json" compile="0" resource="1"
               file="Source/HelpPages/bugSoundsHelp.json"/>
         <FILE id="ovYPGB" name="chorusHelp.json" compile="0" resource="1" file="Source/HelpPages/chorusHelp.json"/>
@@ -27,6 +70,12 @@
         <FILE id="qnsAxO" name="subclickSequencerHelp.json" compile="0" resource="1"
               file="Source/HelpPages/subclickSequencerHelp.json"/>
       </GROUP>
+      <FILE id="jXkJmE" name="AnimatedKnob.h" compile="0" resource="0" file="Source/AnimatedKnob.h"/>
+      <FILE id="vf2QCf" name="Crebits.h" compile="0" resource="0" file="Source/Crebits.h"/>
+      <FILE id="KvabEH" name="LogoClickable.h" compile="0" resource="0" file="Source/LogoClickable.h"/>
+      <FILE id="fus3H5" name="CustomLookAndFeel.h" compile="0" resource="0"
+            file="Source/CustomLookAndFeel.h"/>
+      <FILE id="b5Fbl2" name="UIDrawer.h" compile="0" resource="0" file="Source/UIDrawer.h"/>
       <FILE id="uScCVJ" name="ClickSettingsKnobRack.cpp" compile="1" resource="0"
             file="Source/ClickSettingsKnobRack.cpp"/>
       <FILE id="CrZ2Xl" name="HeaderBar.cpp" compile="1" resource="0" file="Source/HeaderBar.cpp"/>
