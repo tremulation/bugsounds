@@ -66,13 +66,21 @@ enum class TokenType {
     ParStart,
     ParEnd,
     Pattern,
-    Comment
+    Comment,
+    //revision 2
+    CurlyStart,
+    CurlyEnd,
+    GetScale,
+    ClampLength,
+    Subclick,
+    Chitter,
+    Choose
 };
 
 
 struct Token {
     TokenType type;
-    int numValue;
+    float numValue;
     std::string idValue;    //variable name, if a var
     std::string text;       //exact text of the token
     size_t startPos;
@@ -80,7 +88,7 @@ struct Token {
 
     explicit Token(TokenType t, size_t s, size_t e, const std::string& txt) :
         type(t), numValue(0), idValue(""), startPos(s), endPos(e), text(txt) {}
-    Token(TokenType t, int num, size_t s, size_t e, const std::string& txt) :
+    Token(TokenType t, float num, size_t s, size_t e, const std::string& txt) :
         type(t), numValue(num), idValue(""), startPos(s), endPos(e), text(txt) {}
     Token(TokenType t, const std::string& id, size_t s, size_t e, const std::string& txt) :
         type(t), numValue(0), idValue(id), startPos(s), endPos(e), text(txt) {}
@@ -162,6 +170,39 @@ struct LetNode : StatementNode {
 };
 
 
+//subbeatPatternNode: list of subclick percentages
+struct SubclickPatternNode : StatementNode {
+    std::vector<ExprPtr> subclicks; //percentages of the full list of subclicks to use, 0-100
+
+    SubclickPatternNode(const std::vector<ExprPtr>& beats) : subclicks(beats) { }
+};
+
+
+//section node: a loopable section in the song, if looping is enabled. just a statement list
+struct SectionNode : StatementNode {
+    std::vector<StatementPtr> body;
+
+    SectionNode(std::vector<StatementPtr> body) : body(std::move(body)) {}
+};
+
+
+//chitter operator node: expr* chitter pattern, and then statement list, 
+struct ChitterNode : StatementNode {
+    std::vector<StatementPtr> body;
+    std::vector<ExprPtr> chitterPattern;
+
+    ChitterNode(std::vector<StatementPtr> body, const std::vector<ExprPtr>& pattern) : body(std::move(body)), chitterPattern(pattern) {}
+};
+
+//clamplength node: expr length first, followed by statements
+struct ClampLengthNode : StatementNode {
+	std::vector<StatementPtr> body;
+    ExprPtr length; //length in ms
+
+	ClampLengthNode(std::vector<StatementPtr> body, ExprPtr len) : length(len), body(std::move(body)) {}
+};
+
+
 
 //additiveExprNode: left, right, operator
 struct AdditiveExprNode : ExprNode {
@@ -206,6 +247,29 @@ struct RandomNode : ExprNode {
     RandomNode(ExprPtr min, ExprPtr max) : min(min), max(max) {}
 };
 
+//getscalenode: has a baseFreq, an interval, and a scale type enum
+//in code, of the format: getScale(baseFreq, interval, scaleNum). All arguments are ints, so we can randomize them
+struct GetScaleNode : ExprNode {
+	enum ScaleType { Major, Minor, MelodicMinor, Mixolydian, Dorian, Lydian, Chromatic, Pentatonic, MinorPentatonic, Edo10, Edo22, Edo29,};
+	ExprPtr baseFrequency;
+	ExprPtr interval;
+	ExprPtr scaleType; //scaletype is an expression so we can randomize it/change it easier in code
+
+	GetScaleNode(ExprPtr baseFreq, ExprPtr interval, ExprPtr type)
+		: baseFrequency(baseFreq), interval(interval), scaleType(type) {}
+};
+
+
+//choose(expr index, expr* choices): returns the choice at index from the supplied list
+//might be useful
+struct ChooseNode : ExprNode {
+	ExprPtr index; 
+	std::vector<ExprPtr> choices;
+
+	ChooseNode(ExprPtr idx, const std::vector<ExprPtr>& choicesList)
+		: index(idx), choices(choicesList) {}
+};
+
 
 /* -------------------============ PARSER CLASS ============------------------- */
 class Parser {
@@ -234,11 +298,24 @@ private:
     bool parse_pattern();
     bool parse_let();
     bool parse_loop();
+    bool parse_operator();
+    bool parse_spattern();
+	bool parse_chitter();
+	bool parse_clamplength();
+	bool parse_section();
+    
+
+    //for making sure there's only one section in the song. 
+    //set this at the start of compilation. 
+    bool sectionAlreadyCompiled = false;
+
 
     // Expression parsing
+    ExprPtr parse_getscale();
     ExprPtr parse_additive_expr();
     ExprPtr parse_multiplicative_expr();
     ExprPtr parse_primary_expr();
+    ExprPtr parse_choose_expr();
 };
 
 
@@ -246,3 +323,7 @@ private:
 ScriptPtr                generateAST(std::string& songcode, ErrorInfo* errorInfo);
 
 std::vector<SongElement> evaluateAST(ScriptPtr ast, ErrorInfo* errorInfo, std::map<std::string, float>* vars);
+
+
+std::vector<SongElement> evaluateScript(const ScriptPtr script, std::map<std::string, float>* initialEnv, 
+    ErrorInfo* errorInfo, extraSongInfo& extraInfo);

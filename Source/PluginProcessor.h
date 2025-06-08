@@ -157,6 +157,8 @@ public:
     const juce::String& getResSong() const { return resSong; }
     
     void triggerPreviewClick();
+
+    float UIScalingFactor = 1.f;    //used to reset scaling across loads
 	
 private:
 

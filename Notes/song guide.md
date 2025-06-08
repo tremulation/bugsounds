@@ -114,3 +114,141 @@ std::optional<Token> lookahead(Vector<Token> tokens): returns the first token in
 std::optional<Token> lookahead_many(Vector<Token> tokens, int index): extension of lookahead. Returns token at the given index from the start. lookahead_many toks 0 is equivalent to lookahead toks. 
 
 
+Rev 2: adding four new operators: subclick pattern, clamp length, get scale, rest
+
+New tokens:
+tok-curlyStart			({)
+tok-curlyEnd			(})
+tok-getScale			(getScale)
+tok-note				(A5, A#3, Bb6, etc.)	//has a note enum and int octave associated with it. should be evaluated and replaced with an int at parsing step.
+tok-getScale			(getScale)
+tok-clampLength			(clampLength)
+tok-sPattern			(sPattern)
+tok-chitter				(chitter)
+
+
+
+Script 		-> Statement*
+Statement   -> Note COMMA | Operator COMMA | Declaration COMMA | Loop COMMA | Section COMMA
+Note		-> AdditiveExpr AdditiveExpr
+Operator    -> Pattern | SPattern | clampLength | Chitter
+Pattern		-> PATTERN PARSTART AdditiveExpr* PAREND
+SPattern    -> SPATTERN PARSTART AdditiveExpr* PAREND
+GetScale	-> GETSCALE PARSTART AdditiveExpr AdditiveExpr AdditiveExpr PAREND
+ClampLength -> CLAMPLENGTH PARSTART Statement* PAREND
+Chitter		-> CHITTER PARSTART Statement* PAREND
+Declaration -> LET ID EQUALS AdditiveExpr
+Section		-> CURLYSTART Statement* CURLYEND
+Loop		-> BARSTART Statement* BAREND AdditiveExpr
+AdditiveExpr-> MultiplicativeExpr (ADDOPERATOR AdditiveExpr)?
+MultiplicativeExpr -> PrimaryExpr (MULTOPERATOR MultiplicativeExpr)?
+PrimaryExpr -> INT | ID | GetScale | Random | PARSTART AdditiveExpr PAREND 
+Random      -> RAND PARSTART AdditiveExpr AdditiveExpr PAREND
+
+
+    CurlyStart,
+    CurlyEnd,
+    GetScale,
+    ClampLength,
+    SPattern,
+	Chitter
+
+
+
+
+bool Parser::parse_statement() {
+    bool successful = false;
+    optional<Token> nextTok = lookahead();
+    if (!nextTok.has_value()) return true;
+
+    TokenType ntt = nextTok.value().type;
+    if (ntt == TokenType::Num || ntt == TokenType::Id || ntt == TokenType::Rand || ntt == TokenType::ParStart) {
+        successful = parse_note();
+    }
+    else if (ntt == TokenType::Pattern || ntt == TokenType::SPattern || ntt == TokenType::GetScale || ntt == TokenType::ClampLength
+        || ntt == TokenType::Chitter) {
+        successful = parse_operator();
+    }
+    else if (ntt == TokenType::Let) {
+        successful = parse_let();
+    }
+    else if (ntt == TokenType::LStart) {
+        successful = parse_loop();
+    }
+    else {
+        int ntStart = nextTok.value().startPos;
+        int ntEnd   = nextTok.value().endPos;
+        setErrorInfo(errorInfo, "Error: expected a number, pattern, let, or loop", ntStart, ntEnd, "");
+        return false;
+    }
+
+    //I don't want to enforce required comma as last character, so:
+    //If there are at a couple tokens left, then we need a comma as our direct lookahead
+    if (successful) {
+        if (lookahead(1).has_value() && !match_token(TokenType::Comma)) {
+            nextTok = lookahead();  //has probably changed by now.
+            int ntStart = nextTok.value().startPos;
+            int ntEnd = nextTok.value().endPos;
+            setErrorInfo(errorInfo, "Error: missing comma", ntStart, ntEnd, "");
+        }
+    }
+    return successful;
+}
+
+//start by writing a working parse_note, and a working parse_primary_expr (int only).
+//then do the rest of the statements
+//then do the rest of the expressions
+//then do the evaluator
+bool Parser::parse_note() {
+    //match frequency
+    ExprPtr freqExpr = parse_additive_expr();
+	if (!freqExpr) return false;
+
+    //match duration
+    ExprPtr durExpr = parse_additive_expr();
+    if (!durExpr) return false;
+	AST->statements.push_back(new NoteNode(freqExpr, durExpr));
+    return true;
+}
+
+
+
+
+bool Parser::parse_pattern() {
+	//match pattern keyword
+    if (!match_token(TokenType::Pattern)) {
+        if (lookahead().has_value()) return false;
+        setErrorInfo(errorInfo, "Error: expected 'pattern'", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+        return false;
+    }
+
+	//match open parenthesis (
+    if (!match_token(TokenType::ParStart)) {
+        if (lookahead().has_value()) return false;
+        setErrorInfo(errorInfo, "Error: expected an open parenthesis '(' following pattern", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+        return false;
+    }
+
+    //match loop contents
+    std::vector<ExprPtr> subBeats;
+	while (lookahead().has_value() && lookahead()->type != TokenType::ParEnd) {
+		ExprPtr subBeat = parse_additive_expr();
+        subBeats.push_back(subBeat);
+	}
+
+	//match closing parenthesis )
+	if (!match_token(TokenType::ParEnd)) {
+		if (lookahead().has_value()) return false;
+		setErrorInfo(errorInfo, "Error: expected a closing parenthesis ')'", lookahead(-1)->startPos, lookahead(-1)->endPos, "");
+		return false;
+	}
+
+    //check pattern has stuff in it
+	if (subBeats.empty()) {
+		setErrorInfo(errorInfo, "Error: pattern is empty", lookahead(-2)->startPos, lookahead(-2)->endPos, "");
+		return false;
+	}
+
+    AST->statements.push_back(new PatternNode(subBeats));
+    return true;
+}

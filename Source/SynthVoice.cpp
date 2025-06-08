@@ -21,11 +21,24 @@ bool SynthVoice::canPlaySound(juce::SynthesiserSound* sound) {
 
 // ================================================================================
 
-void SynthVoice::startNote(int /*midiNote*/, float velocity, juce::SynthesiserSound* /*sound*/, int /*currentPitchWheelPosition*/) {
+void SynthVoice::startNote(int midiNote, float velocity, juce::SynthesiserSound* /*sound*/, int /*currentPitchWheelPosition*/) {
     isChorusEnabled = apvts->getRawParameterValue("Chorus On")->load();
     startMode = isChorusEnabled ? 1 : 0; //0 = mono, 1 = chorus
     bool resonatorOn = apvts->getRawParameterValue("Resonator On")->load();
+
+    //save new midi note frequency
+    lastMidiNoteFreq = static_cast<float>(juce::MidiMessage::getMidiNoteInHertz(midiNote));
+
     if (startMode == 1) {   //CHORUS MODE
+        //we set the a new midi note frequency above, which the chorus mode dispatcher in renderNextBlock
+        //will use to reinitialize voices that start playing again. 
+
+        //TODO maybe make this toggleable?
+        //the user would have a choice between restarting all voices immediately, or just swapping the note
+        if (playing) {
+            stopChorusRefresh = false;
+            return;
+        }
 
         const int chorusCount = apvts->getRawParameterValue("Chorus Count")->load();
         const float stereoSpread = apvts->getRawParameterValue("Chorus Stereo Spread")->load();
@@ -37,7 +50,8 @@ void SynthVoice::startNote(int /*midiNote*/, float velocity, juce::SynthesiserSo
         //VOICE INITIALIZATION
         for (int i = 0; i < chorusCount; ++i) {
             auto& voice = *voices[i];
-            initializeChorusVoice(&voice, resonatorOn);
+            float midiNoteFreq = lastMidiNoteFreq;
+            initializeChorusVoice(&voice, resonatorOn, midiNoteFreq);
         }
 
         playing = true;
@@ -47,6 +61,7 @@ void SynthVoice::startNote(int /*midiNote*/, float velocity, juce::SynthesiserSo
         //compile songs
         ErrorInfo error;
         std::map<std::string, float> sharedEnv;
+        sharedEnv["midiNote"] = lastMidiNoteFreq;
         std::vector<SongElement> mainSong = evaluateAST(compiledSongScript, &error, &sharedEnv);
         std::vector<SongElement> resSong = {};
         if (resonatorOn) resSong = evaluateAST(compiledResonatorScript, &error, &sharedEnv);
@@ -494,7 +509,7 @@ void SynthVoice::updateVoiceSpatialization(VoiceState* voice, float maxDistance,
 
 
 //for adding new voices, either at startNote, or when the number of chorus voices change
-void SynthVoice::initializeChorusVoice(VoiceState* voice, bool resonatorOn){
+void SynthVoice::initializeChorusVoice(VoiceState* voice, bool resonatorOn, float midiNoteFreq){
      float maxDistance = *apvts->getRawParameterValue("Chorus Max Distance");
      float stereoSpread = *apvts->getRawParameterValue("Chorus Stereo Spread");
 
@@ -517,6 +532,7 @@ void SynthVoice::initializeChorusVoice(VoiceState* voice, bool resonatorOn){
     //compile the ast so each voice gets its own randomized version of the song
     ErrorInfo error;
     std::map<std::string, float> sharedEnv;
+    sharedEnv["midiNote"] = midiNoteFreq;
     std::vector<SongElement> mainSong = evaluateAST(compiledSongScript, &error, &sharedEnv);
     std::vector<SongElement> resSong = {};
     if (resonatorOn) resSong = evaluateAST(compiledResonatorScript, &error, &sharedEnv);
@@ -563,7 +579,7 @@ void SynthVoice::timerCallback() {
                 for (int i = lastChorusCount; i < chorusCount; i++) {
                     //only reinitialize new voices, not every voice
                     auto& newVoice = *voices[i];
-                    initializeChorusVoice(&newVoice, resonatorOn);
+                    initializeChorusVoice(&newVoice, resonatorOn, lastMidiNoteFreq);
                 }
             }
             else {
@@ -627,6 +643,7 @@ void SynthVoice::reinitializeChorusModeVoice(VoiceState* voice) {
     //separate voice compilations of the ASTs
     ErrorInfo error;
     std::map<std::string, float> sharedEnv;
+    sharedEnv["midiNote"] = lastMidiNoteFreq;
     std::vector<SongElement> mainSong = evaluateAST(compiledSongScript, &error, &sharedEnv);
     std::vector<SongElement> resSong = {};
     bool resonatorOn = apvts->getRawParameterValue("Resonator On")->load();
@@ -689,7 +706,7 @@ void SynthVoice::initializeVoiceState(VoiceState* voice, float vel,
     // Main song setup
     voice->song = mainSong;
     if (!voice->song.empty() && voice->song[0].type != SongElement::Type::Pattern) {
-        voice->song.insert(voice->song.begin(), SongElement{ std::vector<uint8_t>{1} });
+        voice->song.insert(voice->song.begin(), SongElement{ SongElement::Type::Pattern, std::vector<int>{1} });
     }
 
     // Initialize first element
@@ -757,10 +774,15 @@ void SynthVoice::setupNextNote(VoiceState& voice, const SongElement& note) {
 
         voice.phase = 0.0f;
         //advance to next note, since patterns are 0-length
-        voice.songIndex++;
-        setupNextNote(voice, voice.song[voice.songIndex]);
+        goto SongNoteAdvance;
     }
-    else {
+    else if (note.type == SongElement::Type::SubclickPattern) {
+		voice.subClickPattern = note.beatPattern;
+        voice.subClickPatternIndex = 0;
+
+        goto SongNoteAdvance;
+    } 
+    else if (note.type == SongElement::Type::Note) {
         // calculate how much the angleDelta will have to increase/decrease by
         // to hit the end frequency in exactly curElement->duration ms.
         const double startingPhaseChange = note.startFrequency / getSampleRate();
@@ -770,7 +792,17 @@ void SynthVoice::setupNextNote(VoiceState& voice, const SongElement& note) {
         voice.phaseDelta = startingPhaseChange;
         voice.samplesRemainingInNote = static_cast<int>(noteLengthInSamples);
         voice.deltaChangePerSample = (endingPhaseChange - startingPhaseChange) / noteLengthInSamples;
+        return;
     }
+    else {
+        //this type isn't handled yet. advance to next note
+        goto SongNoteAdvance;
+    }
+
+SongNoteAdvance:
+    voice.songIndex++;
+    if (voice.songIndex == voice.song.size()) return;
+    setupNextNote(voice, voice.song[voice.songIndex]);
 }
 
 

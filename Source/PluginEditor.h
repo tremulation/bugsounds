@@ -30,7 +30,7 @@
 class BugsoundsAudioProcessorEditor  : public juce::AudioProcessorEditor, public Timer
 {
 public:
-    BugsoundsAudioProcessorEditor (BugsoundsAudioProcessor&);
+    BugsoundsAudioProcessorEditor (BugsoundsAudioProcessor&, float scalingFactor);
     ~BugsoundsAudioProcessorEditor() override;
 
     //==============================================================================
@@ -70,7 +70,6 @@ private:
     LevelMeter levelMeter;
 
     void freqCodeEditorHasChanged();
-    void resonatorCodeEditorHasChanged();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BugsoundsAudioProcessorEditor)
 };

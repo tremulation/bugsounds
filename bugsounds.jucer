@@ -114,8 +114,6 @@
             file="Source/ClickSettingsKnobRack.h"/>
       <FILE id="rGCTH3" name="SynthVoice.h" compile="0" resource="0" file="Source/SynthVoice.h"/>
       <FILE id="Opc9RP" name="SynthSound.h" compile="0" resource="0" file="Source/SynthSound.h"/>
-      <FILE id="SHI33s" name="SongCodeCompiler.cpp" compile="1" resource="0"
-            file="Source/SongCodeCompiler.cpp"/>
       <FILE id="zqjN1M" name="SongCodeCompiler.h" compile="0" resource="0"
             file="Source/SongCodeCompiler.h"/>
       <FILE id="QKqkC6" name="songcodeEditor.cpp" compile="1" resource="0"

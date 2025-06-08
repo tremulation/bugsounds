@@ -79,10 +79,16 @@ public:
         double pipPhaseDeltaChangePerSample = 0.0;
 
         //pattern state
-        std::vector <uint8_t> beatPattern = { 1 };
+        std::vector <int> beatPattern = { 1 };
         int patternIndex = 0;
         int patternPhaseDivisor = 1;
         int clicksRemainingInBeat = 1;
+
+        //subclick pattern state
+        //this advances every time a click is generated.
+        //the value from 0 to 100 is used to determine the amount of subclicks to play each click
+		std::vector<int> subClickPattern = { 100 };
+		int subClickPatternIndex = 0;
 
         std::vector<Click> activeClicks;
         std::vector<SubClick> activeSubClicks;
@@ -152,7 +158,7 @@ private:
     Click* startNewClick(VoiceState& voice, float clickGenerationFreq, float vol);
     void startNewSubClick(VoiceState& voice, float baseFreq, int samples, float vol);
     void updateVoiceSpatialization(VoiceState* voice, float maxDistance, float stereoSpread);
-    void initializeChorusVoice(VoiceState* voice, bool resonatorOn);
+    void initializeChorusVoice(VoiceState* voice, bool resonatorOn, float  midiNoteFreq);
     //using this to update the chorus positions continuously whenever something changes
     void timerCallback() override;
     void updateInternalSpatialization(float maxDistance, float stereoSpread);
@@ -178,6 +184,8 @@ private:
     float lastMaxDistance = -1.0f;
     float lastStereoSpread = -1.0f;
     int lastChorusCount = -1;
+
+    float lastMidiNoteFreq = 0;
     
 
 	//========================= CONSTANTS =========================

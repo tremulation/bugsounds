@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="100"
+   height="100"
+   viewBox="0 0 26.458333 26.458333"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="samknob_static.svg"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showguides="true"
+     inkscape:zoom="5.6568543"
+     inkscape:cx="34.73662"
+     inkscape:cy="57.364037"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <sodipodi:guide
+       position="13.229166,13.229166"
+       orientation="0,1"
+       id="guide1"
+       inkscape:locked="false"
+       inkscape:label=""
+       inkscape:color="rgb(0,134,229)" />
+    <sodipodi:guide
+       position="13.22917,13.229166"
+       orientation="-0.70710678,0.70710678"
+       id="guide2"
+       inkscape:locked="false"
+       inkscape:label=""
+       inkscape:color="rgb(0,134,229)" />
+    <sodipodi:guide
+       position="13.22917,13.229166"
+       orientation="0.70710678,0.70710678"
+       id="guide3"
+       inkscape:label=""
+       inkscape:locked="false"
+       inkscape:color="rgb(0,134,229)" />
+    <sodipodi:guide
+       position="13.229163,13.229166"
+       orientation="1,0"
+       id="guide4"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <inkscape:path-effect
+       effect="skeletal"
+       id="path-effect10"
+       is_visible="true"
+       lpeversion="1"
+       pattern="m 13.229167,2.9736597 c 0,-1.5347922 0,-1.566767 0,-1.566767"
+       copytype="repeated"
+       prop_scale="1"
+       scale_y_rel="false"
+       spacing="6.6"
+       normal_offset="-2.5"
+       tang_offset="0"
+       prop_units="false"
+       vertical_pattern="false"
+       hide_knot="false"
+       fuse_tolerance="1.1" />
+    <inkscape:path-effect
+       effect="skeletal"
+       id="path-effect9"
+       is_visible="true"
+       lpeversion="1"
+       pattern="m 13.229167,2.9736597 c 0,-1.5347922 0,-1.566767 0,-1.566767"
+       copytype="repeated_stretched"
+       prop_scale="1"
+       scale_y_rel="false"
+       spacing="7"
+       normal_offset="-1.1"
+       tang_offset="0"
+       prop_units="false"
+       vertical_pattern="false"
+       hide_knot="false"
+       fuse_tolerance="2.3" />
+    <inkscape:path-effect
+       effect="skeletal"
+       id="path-effect8"
+       is_visible="true"
+       lpeversion="1"
+       pattern="M 5.9389062,20.519431 4.1962779,22.262059"
+       copytype="repeated"
+       prop_scale="0.73"
+       scale_y_rel="false"
+       spacing="0"
+       normal_offset="0"
+       tang_offset="0"
+       prop_units="false"
+       vertical_pattern="false"
+       hide_knot="false"
+       fuse_tolerance="-1" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <!-- Innerfill is the line that indicates the current value of the knob. In this file it is set to 100%. Note that this does not line up with the indicator tick -->
+    <g
+       id="g3"
+       inkscape:label="static">
+      <path
+         style="display:inline;fill:#000000;fill-opacity:0;stroke:#181c1f;stroke-width:0.79375;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+         id="path4"
+         sodipodi:type="arc"
+         sodipodi:cx="13.229167"
+         sodipodi:cy="13.229167"
+         sodipodi:rx="8.4120646"
+         sodipodi:ry="8.4120674"
+         sodipodi:start="2.3561945"
+         sodipodi:end="0.78539816"
+         sodipodi:arc-type="slice"
+         d="m 7.280939,19.177397 a 8.4120646,8.4120674 0 0 1 1e-7,-11.89646 8.4120646,8.4120674 0 0 1 11.8964559,1e-7 8.4120646,8.4120674 0 0 1 0,11.8964599 l -5.948228,-5.94823 z"
+         inkscape:label="outerborder" />
+      <path
+         id="path5-5"
+         style="display:inline;fill:#1a2024;fill-opacity:0.521569;stroke:none;stroke-width:0.820208;stroke-linecap:round"
+         d="M 18.771904,14.61755 A 5.7139778,5.7139778 0 0 1 13.057926,20.331528 5.7139778,5.7139778 0 0 1 7.3439485,14.61755 5.7139778,5.7139778 0 0 1 13.057926,8.9035725 5.7139778,5.7139778 0 0 1 18.771904,14.61755 Z"
+         inkscape:label="knobshadow" />
+      <path
+         id="path5"
+         style="display:inline;fill:#222a2e;stroke:none;stroke-width:0.820208;stroke-linecap:round;fill-opacity:1"
+         d="M 18.943145,13.217862 A 5.7139778,5.7139778 0 0 1 13.229167,18.93184 5.7139778,5.7139778 0 0 1 7.5151892,13.217862 5.7139778,5.7139778 0 0 1 13.229167,7.5038844 5.7139778,5.7139778 0 0 1 18.943145,13.217862 Z"
+         inkscape:label="innerknob" />
+      <path
+         style="display:inline;fill:#1a2024;fill-opacity:0.522852;stroke:none;stroke-width:0.79375;stroke-linecap:round"
+         d="m 7.5151892,13.229167 c 0.00984,1.483191 0.5374438,2.83752 1.6735869,4.040394 1.4774669,1.225327 2.8219929,1.638683 4.0403909,1.662279 3.444756,-0.04357 5.536882,-2.730824 5.713978,-5.702673 -2.691796,6.983538 -8.155835,5.330241 -11.4279558,0 z"
+         id="path1"
+         sodipodi:nodetypes="ccccc"
+         inkscape:label="innerdropshadow" />
+      <path
+         id="path4-7"
+         d="m 6.1731749,20.285161 -1.162709,1.141413 v 0 m -1.670651,-8.29542 c -1.530067,0.0011 -1.561943,0.0011 -1.561943,0.0011 m 4.383613,-7.1590531 -1.109745,-1.105583 m 8.2593331,-1.739916 c -0.0034,-1.530063 -0.0034,-1.561939 -0.0034,-1.561939 m 7.165313,4.371922 1.103296,-1.111614 m 1.75433,8.2567611 c 1.530055,-0.0056 1.561931,-0.0057 1.561931,-0.0057 m -4.360223,7.171514 1.12076,1.133581 v 0"
+         style="display:inline;fill:#000000;fill-opacity:0;stroke:#181c1f;stroke-width:0.79375;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+         sodipodi:nodetypes="cccccccccccccccc"
+         inkscape:label="ticks" />
+      <path
+         style="fill:none;fill-opacity:0.572549;stroke:#ffffff;stroke-width:0.79375;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-dashoffset:61;stroke-opacity:0.285192"
+         id="path3"
+         sodipodi:type="arc"
+         sodipodi:cx="13.490388"
+         sodipodi:cy="12.50419"
+         sodipodi:rx="3.7888038"
+         sodipodi:ry="3.7888377"
+         sodipodi:start="4.712389"
+         sodipodi:end="5.4977871"
+         sodipodi:arc-type="arc"
+         d="m 13.490388,8.7153528 a 3.7888038,3.7888377 0 0 1 2.679089,1.1097247"
+         sodipodi:open="true"
+         inkscape:label="innerknobhighlight" />
+      <path
+         id="path2"
+         style="display:inline;fill:none;stroke:#181c1f;stroke-width:0.820208;stroke-linecap:round"
+         d="M 18.943145,13.229167 A 5.7139778,5.7139778 0 0 1 13.229167,18.943145 5.7139778,5.7139778 0 0 1 7.5151892,13.229167 5.7139778,5.7139778 0 0 1 13.229167,7.5151892 5.7139778,5.7139778 0 0 1 18.943145,13.229167 Z"
+         inkscape:label="innerborder" />
+    </g>
+    <!--the indicator tick inside of the knob should rotate when the knob is turned. -->
+  </g>
+</svg>

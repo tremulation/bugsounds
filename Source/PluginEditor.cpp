@@ -11,19 +11,21 @@
 
 
 //==============================================================================
-BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProcessor& p)
+BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProcessor& p, float scalingFactor)
     : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p, *this), frequencyEditor("Frequency Editor", "frequencyEditor", p, *this),
     resonatorEditor("Resonator Editor", "resonatorEditor", p, *this), resonatorKnobRack(p, *this), headerBar(p, *this), pipSequencer(p, *this),
     chorusKnobRack(p, *this), helpCompendium(*this), levelMeter(p)
 {
     juce::LookAndFeel::setDefaultLookAndFeel(&myCustomLNF);
     setResizable(true, true);
+    setResizeLimits(baseWidth / 2, baseHeight / 2, baseWidth * 3, baseHeight * 3);
     getConstrainer()->setFixedAspectRatio(800.0f/640.0f);
-    setSize(baseWidth, baseHeight);
+    //set scaling back to what it was before the plugin was minimized
+    setSize(baseWidth * scalingFactor, baseHeight * scalingFactor);
 
                         addAndMakeVisible(headerBar);
-    addAndMakeVisible(pipSequencer);      addAndMakeVisible(clickSettingsRack);
-    addAndMakeVisible(frequencyEditor);   addAndMakeVisible(resonatorEditor);
+    addAndMakeVisible(pipSequencer);       addAndMakeVisible(clickSettingsRack);
+    addAndMakeVisible(frequencyEditor);    addAndMakeVisible(resonatorEditor);
     addAndMakeVisible(resonatorKnobRack);  addAndMakeVisible(chorusKnobRack);
 
     testButton.setButtonText("Compile");
@@ -57,6 +59,8 @@ void BugsoundsAudioProcessorEditor::resized()
     int mainWidth = getWidth();
     if (helpCompendium.isVisible()) mainWidth = mainWidth - (mainWidth * (250.f / 800.f));
     const float scalar = (float)getHeight() / (float)baseHeight;
+    //save scaling to the plugin processor
+    audioProcessor.UIScalingFactor = scalar;
 
     //------------------- header. 6.25% of total height ------------------- 
     auto headerHeight = (int)(getHeight() * 40.f / 640.f);
@@ -183,11 +187,12 @@ void BugsoundsAudioProcessorEditor::resized()
 }
 
 
-//if this doesn't work implement a fifo queue for transferring the string w/out locks
 void BugsoundsAudioProcessorEditor::freqCodeEditorHasChanged() {
     juce::String freqSongCode = frequencyEditor.getText();
     ErrorInfo errorInfo = {};
 	std::map<std::string, float> env;
+    //insert dummy midi variable for testing
+    env["midiNote"] = 1.f;
     std::vector<SongElement> songElements;
 
     //compile check freq songcode 

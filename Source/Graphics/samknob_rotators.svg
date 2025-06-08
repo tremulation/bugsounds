@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="100" height="100" viewBox="0 0 26.458333 26.458333"
+     xmlns="http://www.w3.org/2000/svg">
+  <g id="rotators">
+    <!-- indicator tick -->
+    <path id="indicatorTick"
+          style="fill:none;stroke:#ffffff;stroke-width:0.79375;stroke-linecap:round"
+          d="m14.1084,14.1084 2.2949,2.2949"/>
+  </g>
+</svg>

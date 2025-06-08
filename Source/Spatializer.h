@@ -63,6 +63,7 @@ public:
 		float shelfGainDB = juce::jmap(normalizedDistance, 0.0f, -24.0f);
 		float q = 0.7f;
 		auto& filter = chain.get<1>();
+		if (cutoffFreq < 0) cutoffFreq = 0;
 		filter.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighShelf(
 			currentSpec.sampleRate,
 			cutoffFreq,

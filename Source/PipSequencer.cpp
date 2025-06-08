@@ -73,7 +73,7 @@ void PipSequencer::paint(juce::Graphics& g) {
 
     //draw border under mode buttons
     auto modeButtonBounds = bodyBounds.removeFromTop((buttonRowHeight - 5.f) * scalar);
-    g.drawRect(modeButtonBounds, 1.0f * scalar);
+    g.drawRect(modeButtonBounds, 1.f * scalar);
 
 }
 
@@ -107,15 +107,15 @@ void PipSequencer::resized() {
     const int horizontalSpacing = 5.f * scalar;  // Space between and around buttons
     const int verticalSpacing = 5.f   * scalar;    // Space above and below buttons
 
-    // Remove vertical spacing
-    // buttonRow.removeFromTop(verticalSpacing);
+    //remove vertical spacing
+    //buttonRow.removeFromTop(verticalSpacing);
     buttonRow.removeFromBottom(verticalSpacing);
 
-    // Calculate button width accounting for all spaces
+    //calculate button width accounting for all spaces
     int totalSpacing = horizontalSpacing * 5; //space before first, between each (3 spaces), and after last
     int buttonWidth = (buttonRow.getWidth() - totalSpacing) / 4;
 
-    // Position each button with spacing
+    //position each button with spacing
     juce::Font font(16.0f * scalar);
     for (int i = 0; i < 4; i++) {
         int buttonPadding = 10.f * scalar;  //space to the sides of each text block
@@ -131,7 +131,7 @@ void PipSequencer::resized() {
 
 
     auto* content = viewport->getViewedComponent();
-    if (content != nullptr)
+    if (content != nullptr && scalar > 0.0f)
     {
         content->setTransform(juce::AffineTransform::scale(scalar, scalar));
     }
@@ -414,7 +414,7 @@ void SequenceBox::resized() {
 
 
 int SequenceBox::getMinimumWidth() const {
-    return (pipBars.size() * (pipWidth + pipSpacing) + pipSpacing * 3 ) * parent.scalar;  // for add button and some padding
+    return (pipBars.size() * (pipWidth + pipSpacing) + pipSpacing * 3 );  // for add button and some padding
 }
 
 

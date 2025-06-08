@@ -205,7 +205,7 @@ bool BugsoundsAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* BugsoundsAudioProcessor::createEditor()
 {
-    return new BugsoundsAudioProcessorEditor (*this);
+    return new BugsoundsAudioProcessorEditor (*this, UIScalingFactor);
 }
 
 //==============================================================================
