@@ -194,7 +194,6 @@ void BugsoundsAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     val = Decibels::gainToDecibels(val);
     if (val < rmsLevelRight.getCurrentValue()) rmsLevelRight.setTargetValue(val);
     else rmsLevelRight.setCurrentAndTargetValue(val);
-
 }
 
 //==============================================================================
@@ -205,7 +204,11 @@ bool BugsoundsAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* BugsoundsAudioProcessor::createEditor()
 {
-    return new BugsoundsAudioProcessorEditor (*this, UIScalingFactor);
+    auto editor = new BugsoundsAudioProcessorEditor(*this, UIScalingFactor);
+    const auto sampleRate = getSampleRate();
+    editor->setupWaveformThumbnail(lastPreviewBuffer, sampleRate);
+    return editor;
+    
 }
 
 //==============================================================================
@@ -367,8 +370,13 @@ void BugsoundsAudioProcessor::setUserSongcode(const juce::String& songcode, cons
 
 void BugsoundsAudioProcessor::triggerPreviewClick(){
     if (clickPreviewer != nullptr) {
-        clickPreviewer->triggerPreviewClick();
-    }
+        clickPreviewer->generateFullPreview(lastPreviewBuffer);
+    } 
+ //   //print out every 4th sample from lastPreviewBuffer
+	//for (int i = 0; i < lastPreviewBuffer.getNumSamples(); i += 4) {
+	//	juce::Logger::writeToLog(juce::String(i) + ": " + juce::String(lastPreviewBuffer.getSample(0, i)));
+	//}
+	sendChangeMessage();
 }
 
 

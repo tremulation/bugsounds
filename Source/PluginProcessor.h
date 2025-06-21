@@ -23,7 +23,7 @@
 //==============================================================================
 /**
 */
-class BugsoundsAudioProcessor : public juce::AudioProcessor
+class BugsoundsAudioProcessor : public juce::AudioProcessor, public juce::ChangeBroadcaster
 {
 public:
     //==============================================================================
@@ -159,9 +159,10 @@ public:
     void triggerPreviewClick();
 
     float UIScalingFactor = 1.f;    //used to reset scaling across loads
-	
-private:
 
+    juce::AudioBuffer<float> lastPreviewBuffer;
+
+private:
     std::vector<ChorusVoicePosition> chorusVoicePositions;
 
     juce::String freqSong = "";

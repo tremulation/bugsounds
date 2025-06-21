@@ -27,7 +27,7 @@
 //==============================================================================
 /**
 */
-class BugsoundsAudioProcessorEditor  : public juce::AudioProcessorEditor, public Timer
+class BugsoundsAudioProcessorEditor : public juce::AudioProcessorEditor, public Timer, juce::ChangeListener
 {
 public:
     BugsoundsAudioProcessorEditor (BugsoundsAudioProcessor&, float scalingFactor);
@@ -42,9 +42,15 @@ public:
     void toggleHelpCompendium(juce::String pageId);
     void showCreditsWindow();
 
+    //audio visualizer
+    juce::AudioFormatManager formatManager;
+    juce::AudioThumbnailCache thumbnailCache;
+    juce::AudioThumbnail clickThumbnail;
+    void setupWaveformThumbnail(const juce::AudioSampleBuffer& waveform, double sampleRate);
+
 private:
     void timerCallback() override;
-
+    void changeListenerCallback(juce::ChangeBroadcaster* source);
     const int baseWidth = 800;
     const int baseHeight = 640;
     const int helpWidth = 300;
@@ -52,6 +58,10 @@ private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     BugsoundsAudioProcessor& audioProcessor;
+
+
+    
+    
 
     CustomLookAndFeel myCustomLNF;
 

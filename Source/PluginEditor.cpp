@@ -14,7 +14,8 @@
 BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProcessor& p, float scalingFactor)
     : AudioProcessorEditor(&p), audioProcessor(p), clickSettingsRack(p, *this), frequencyEditor("Frequency Editor", "frequencyEditor", p, *this),
     resonatorEditor("Resonator Editor", "resonatorEditor", p, *this), resonatorKnobRack(p, *this), headerBar(p, *this), pipSequencer(p, *this),
-    chorusKnobRack(p, *this), helpCompendium(*this), levelMeter(p)
+    chorusKnobRack(p, *this), helpCompendium(*this), levelMeter(p), 
+    thumbnailCache(1), clickThumbnail(1, formatManager, thumbnailCache)
 {
     juce::LookAndFeel::setDefaultLookAndFeel(&myCustomLNF);
     setResizable(true, true);
@@ -40,10 +41,14 @@ BugsoundsAudioProcessorEditor::BugsoundsAudioProcessorEditor(BugsoundsAudioProce
 
     startTimerHz(24);
     addAndMakeVisible(levelMeter);
+
+    audioProcessor.addChangeListener(this);
+	formatManager.registerBasicFormats(); 
 }
 
 BugsoundsAudioProcessorEditor::~BugsoundsAudioProcessorEditor() {
     juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
+    audioProcessor.removeChangeListener(this);
 }
 
 //==============================================================================
@@ -300,9 +305,27 @@ void BugsoundsAudioProcessorEditor::showCreditsWindow() {
     resized();
 }
 
+
+//call in createEditor to set up the thumbnail
+void BugsoundsAudioProcessorEditor::setupWaveformThumbnail(const juce::AudioSampleBuffer& waveform, double sampleRate) {
+    clickThumbnail.reset(1, sampleRate, waveform.getNumSamples());
+}
+
 void BugsoundsAudioProcessorEditor::timerCallback(){
     levelMeter.setLevel(audioProcessor.getRmsValue(0), audioProcessor.getRmsValue(1));
     levelMeter.repaint();
+}
+
+
+void BugsoundsAudioProcessorEditor::changeListenerCallback(juce::ChangeBroadcaster* source) {
+    if (source == &audioProcessor) {
+        int numSamples = audioProcessor.lastPreviewBuffer.getNumSamples();
+        auto buffer = audioProcessor.lastPreviewBuffer;
+        clickThumbnail.reset(1, audioProcessor.getSampleRate(), numSamples);
+        clickThumbnail.addBlock(0, buffer, 0, numSamples);
+        clickThumbnail.sendChangeMessage();
+        repaint();
+    }
 }
 
 

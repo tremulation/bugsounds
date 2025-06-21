@@ -35,7 +35,10 @@ PipSequencer::PipSequencer(BugsoundsAudioProcessor& p, BugsoundsAudioProcessorEd
 
     //setup preview button
     previewButton.setName("ClickPreview");
-    previewButton.onClick = [this] { audioProcessor.triggerPreviewClick(); };
+    previewButton.onClick = [this] { 
+        audioEditor.clickThumbnail.clear();
+        audioProcessor.triggerPreviewClick();
+        };
     addAndMakeVisible(previewButton);
 
     loadPipsFromProcessor();
@@ -66,6 +69,32 @@ void PipSequencer::paint(juce::Graphics& g) {
     Colour c2 = Colour::fromString("#818BCA").withAlpha(1.0f);
     drawUIBlock(g, headerBounds, c1, c2, false, true, scalar);
 
+    //draw waveform readout in the header
+    headerBounds.removeFromRight(35.f * scalar + 35.f * scalar + 5.f * scalar);
+    auto waveformBounds = headerBounds.removeFromRight(240.f * scalar).reduced(7.f * scalar);
+    g.setColour(juce::Colour(0xff1B241B));
+    g.fillRect(waveformBounds);
+    //border
+    g.setColour(juce::Colour(0xff555555));
+    g.drawRect(waveformBounds, 2.f * scalar);
+
+    //update audio thumbnail
+    auto thumbnailBounds = waveformBounds.reduced(2.f * scalar);
+    g.setColour(juce::Colours::white.withAlpha(1.f));
+    if (audioEditor.clickThumbnail.getTotalLength() > 0.f) {
+        audioEditor.clickThumbnail.drawChannel(
+            g,
+            thumbnailBounds,
+            0.0f,                                       //start time
+            audioEditor.clickThumbnail.getTotalLength(),//end time
+            0,                                          //channel index                  
+            1.f                                         //zoom    
+        );
+    }
+    else {
+        g.drawHorizontalLine(thumbnailBounds.getCentreY(), thumbnailBounds.getX(), thumbnailBounds.getRight());
+    }
+
     //body
     c1 = Colour::fromString("#D9D9D9").withAlpha(1.0f);
     c2 = Colour::fromString("#D9D9D9").withAlpha(1.0f);
@@ -74,6 +103,8 @@ void PipSequencer::paint(juce::Graphics& g) {
     //draw border under mode buttons
     auto modeButtonBounds = bodyBounds.removeFromTop((buttonRowHeight - 5.f) * scalar);
     g.drawRect(modeButtonBounds, 1.f * scalar);
+
+
 
 }
 
@@ -174,15 +205,8 @@ void PipSequencer::logPips(const std::vector<Pip> pips) {
             pipString += juce::String(hzValue) + "Hz, ";
         }
 
-        // Length (µs/ms)
-        if (pip.length < 100) {
-            int usValue = static_cast<int>(std::round(pip.length));
-            pipString += juce::String(usValue) + "us, ";
-        }
-        else {
-            float msValue = pip.length / 1000.0f;
-            pipString += juce::String(msValue, 2) + "ms, ";
-        }
+        float msValue = pip.length / 100.0f;
+        pipString += juce::String(msValue, 2) + "ms, ";
 
         // Tail (µs/ms)
         if (pip.tail < 100) {
@@ -592,15 +616,9 @@ juce::String PipBar::getFormattedValue() const {
     case OVERLAP: {
         //same formatting for both time values
         int timeVal = (mode == LENGTH) ? ourPip.length : ourPip.tail;
-        if (timeVal < 100) {  
-            //show microseconds w/ no decimal place
-            return juce::String(timeVal) + " us";
-        }
-        else {
-            //ms with two decimal places
-            float msVal = timeVal / 1000.f;
-            return juce::String(msVal, 2) + "ms";
-        }
+        //ms with two decimal places
+        float msVal = timeVal / 100.f;
+        return juce::String(msVal, 2) + "ms";
     }
     case LEVEL:
         return juce::String(std::round(ourPip.level * 100)) + "%";
