@@ -96,9 +96,12 @@ public:
         // Remove finished subclicks.
         //TODO STILL CAUSING CRASHES WHY??>????>?>
         for (auto it = activeSubClicks.begin(); it != activeSubClicks.end();) {
+            if (it == activeSubClicks.end() || it < activeSubClicks.begin()) break;
             if (it->samplesRemaining <= 0) {
                 //erase returns the next valid iterator
-                it = activeSubClicks.erase(it);             
+                //check if the iterator is in range, if not -> return
+
+                it = activeSubClicks.erase(it);        
             } else {
                 ++it;
             }
@@ -107,31 +110,11 @@ public:
         return static_cast<float>(output);
     }
 
-    //call to trigger a new click. this generates audio directly through the parent class calling this classes' renderNextBlock function
-    void triggerPreviewClick() {
-        // Immediately spawn the first subclick.
-        if (pips.empty()) {
-            return;
-        }
-        spawnSubClick(pips[0]);
-        int delay = pips[0].length - pips[0].tail;
-        samplesUntilNextSubClick = (delay > 0) ? delay : 1;
-        currentPipIndex = 1;
-        // If there's only one pip, the preview will immediately end.
-        //this logger correctly reports the number of pips
-        /*juce::Logger::writeToLog("There are " + juce::String(pips.size()) + " pips");*/
-        previewActive = pips.size() == 1;
-        if (pips.size() == 1) {
-            previewActive = false;
-        } else {
-            previewActive = true;
-        }
-            
-    }
 
     void setPips(std::vector<Pip> newPips) {
         pips = newPips;
     }
+
 
     void generateFullPreview(juce::AudioBuffer<float>& outBuffer) {
         if (pips.empty()) {
@@ -141,15 +124,39 @@ public:
 
         //get the correct size of the buffer so we can tell rendernextblock how many we need
         //tail is the amount of overlap with the next note, so disregard tail of last note
-		int lengthMicoseconds = 0;
-        /*for (int i = 0; i < pips.size() - 1; i++)  lengthMicoseconds += pips[i].length - (i < pips.size() - 1 ? pips[i].tail : 0);*/
+
+        //if (pips.size() == 1) lengthMicoseconds = pips[0].length;   //just one pip
+        //else {
+        //    //all but the last: full lengths
+        //    for (int i = 0; i < pips.size() - 1; ++i)
+        //        lengthMicoseconds += pips[i].length;
+        //    // Last pip: subtract the previous pip’s tail
+        //    int last = (int)pips.size() - 1;
+        //    lengthMicoseconds += pips[last].length
+        //        - pips[last - 1].tail;
+        //}
+
+        int nextStart = 0.f;
+        int lenMS = 0.f;
         for (int i = 0; i < pips.size(); i++) {
-            if (i <= pips.size() - 1) {
-                if (i < pips.size() - 1) lengthMicoseconds += pips[i].length; //everything but the last click
-                else lengthMicoseconds += pips[i].length - pips[i - 1].tail;
-            }
+            const Pip& pip = pips[i];
+            int overlap = pip.tail;
+			int length = pip.length;
+
+            //get overlap with next subclick
+            if (overlap > length) overlap = length;
+
+            //find the time boundaries of this particular subclick
+            int start = nextStart;
+            int end = nextStart + length;
+
+            //update the two time markers
+            if (end > lenMS) lenMS = end;
+            int advance = length - overlap;
+            if (advance < 0) advance = 0;
+            nextStart += advance;
         }
-        double lengthSeconds = lengthMicoseconds / 100000.0; // 1 second is 1 million microseconds
+        double lengthSeconds = static_cast<double>(lenMS) / 1e6; // 1 second is 1 million microseconds
 		int totalSamples = static_cast<int>(lengthSeconds * currentSampleRate);
 
         //allocate buffa
