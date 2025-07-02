@@ -1,15 +1,15 @@
-# Bugsounds (working title)
+# Bugsounds
 
-A VST3 software synthesizer that aims to simulate the way insects produce sound. 
+A VST3 software synthesizer that aims to accurately simulate the way insects produce sound (stridulation and tymbalation). It is fit for both sound design and electronic music production. It also features built-in documentation so it isn't too hard to learn.  
 
-It features a unique way to generate clicks, the auditory particles that make up all bug song, as well as a notation language that captures the natural randomness of these songs. This notation language, based on Max 8 envelopes, controls both click frequency, and a resonator for bugs like cicadas. Finally, the synth will have a chorus mode, to approximate multiple insects playing around the listener.
+It features a unique way to generate clicks, the auditory particles that make up bug song, as well as a notation language that combines envelopes and LFOs, compiled on the fly for each note. This notation language, inspired by Max 8 envelopes, controls both click frequency, and the base frequency of an optional resonator (for bugs like cicadas). Finally, the synth has a chorus mode, to approximate multiple insects playing around the listener.
 
-This project started as a Max 8 patch. You can find that in the "Prototype" directory.
+This project started as a Max 8 patch. You can find that in the "Prototype" directory. There's also a prototype for the resonator, and a prototype for general testing of filters written using the genexpr codebox language.
 
 
 ## Installation
 
-1. [Download juce](https://juce.com/download/) and put it's files somewhere convenient. 
+1. [Download juce](https://juce.com/download/) and put its files somewhere convenient. 
 
 2. run the bugsounds.projucer file with projucer.exe in your juce installation directory. It should automatically fill in the dependencies you need to build the project. 
 
