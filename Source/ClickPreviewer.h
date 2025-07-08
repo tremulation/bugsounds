@@ -92,20 +92,14 @@ public:
             output += oscVal * click.curLevel;
             click.samplesRemaining--;
         }
-
+        int activeClickNum = activeSubClicks.size();
+        if (activeClickNum == 0) return 0;
         // Remove finished subclicks.
-        //TODO STILL CAUSING CRASHES WHY??>????>?>
-        for (auto it = activeSubClicks.begin(); it != activeSubClicks.end();) {
-            if (it == activeSubClicks.end() || it < activeSubClicks.begin()) break;
-            if (it->samplesRemaining <= 0) {
-                //erase returns the next valid iterator
-                //check if the iterator is in range, if not -> return
-
-                it = activeSubClicks.erase(it);        
-            } else {
-                ++it;
-            }
-        }
+        activeSubClicks.erase(
+            std::remove_if(activeSubClicks.begin(), activeSubClicks.end(),
+                [](auto& c) { return c.samplesRemaining <= 0; }),
+            activeSubClicks.end()
+        );
 
         return static_cast<float>(output);
     }
