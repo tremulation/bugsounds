@@ -163,15 +163,20 @@ void BugsoundsAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    //render main synth player output
+    //MAIN SYNTH
     chorusSynth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 
+    //PREVIEWER
+    //check if UI asked for a preview
+    if (previewRequested.exchange(false, std::memory_order_acquire)) {
+        clickPreviewer->generateFullPreview(lastPreviewBuffer);
+        sendChangeMessage();
+    }
     //render previewer output into a temporary buffer
     juce::AudioBuffer<float> previewBuffer(buffer.getNumChannels(), buffer.getNumSamples());
     previewBuffer.clear();
     juce::AudioSourceChannelInfo previewInfo(&previewBuffer, 0, buffer.getNumSamples());
     if (clickPreviewer != nullptr) clickPreviewer->getNextAudioBlock(previewInfo);
-
     //mix previewer output into main buffer
     for (int channel = 0; channel < buffer.getNumChannels(); channel++) {
         buffer.addFrom(channel, 0, previewBuffer, channel, 0, buffer.getNumSamples());
@@ -368,15 +373,10 @@ void BugsoundsAudioProcessor::setUserSongcode(const juce::String& songcode, cons
 	}
 }
 
+
+//set the flag indicating the UI would like us to generate one preview and write it to the buffer
 void BugsoundsAudioProcessor::triggerPreviewClick(){
-    if (clickPreviewer != nullptr) {
-        clickPreviewer->generateFullPreview(lastPreviewBuffer);
-    } 
- //   //print out every 4th sample from lastPreviewBuffer
-	//for (int i = 0; i < lastPreviewBuffer.getNumSamples(); i += 4) {
-	//	juce::Logger::writeToLog(juce::String(i) + ": " + juce::String(lastPreviewBuffer.getSample(0, i)));
-	//}
-	sendChangeMessage();
+    previewRequested.store(true, std::memory_order_release);
 }
 
 

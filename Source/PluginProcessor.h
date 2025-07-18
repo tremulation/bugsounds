@@ -156,11 +156,13 @@ public:
     const juce::String& getFreqSong() const { return freqSong; }
     const juce::String& getResSong() const { return resSong; }
     
+    //stuff for generating/storing the preview click in a buffer
     void triggerPreviewClick();
-
-    float UIScalingFactor = 1.f;    //used to reset scaling across loads
-
+    std::atomic<bool> previewRequested{ false };
     juce::AudioBuffer<float> lastPreviewBuffer;
+
+    //used to reset scaling across loads
+    float UIScalingFactor = 1.f;    
 
 private:
     std::vector<ChorusVoicePosition> chorusVoicePositions;

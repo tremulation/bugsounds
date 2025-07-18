@@ -162,7 +162,6 @@ private:
     //using this to update the chorus positions continuously whenever something changes
     void timerCallback() override;
     void updateInternalSpatialization(float maxDistance, float stereoSpread);
-    
 
     //=================================== data and references ==============================================
     juce::AudioProcessorValueTreeState* apvts = nullptr;

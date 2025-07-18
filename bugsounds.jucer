@@ -8,6 +8,10 @@
               pluginCode="Bug1">
   <MAINGROUP id="RIYwew" name="bugsounds">
     <GROUP id="{28D391B9-8AA7-A9B0-B4E4-937980DDCF90}" name="Source">
+      <FILE id="D4F1Nm" name="ClickGenerator.cpp" compile="1" resource="0"
+            file="Source/ClickGenerator.cpp"/>
+      <FILE id="vaAcC1" name="ClickGenerator.h" compile="0" resource="0"
+            file="Source/ClickGenerator.h"/>
       <FILE id="UBnl3u" name="AnimatedLevelSlider.h" compile="0" resource="0"
             file="Source/AnimatedLevelSlider.h"/>
       <FILE id="UcsPAe" name="LevelMeter.cpp" compile="1" resource="0" file="Source/LevelMeter.cpp"/>

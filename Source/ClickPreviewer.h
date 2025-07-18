@@ -12,8 +12,9 @@
 #include <JuceHeader.h>
 #include <vector>
 #include "PipStructs.h"
+#include "ClickGenerator.h"
 
-class ClickPreviewer : public juce::AudioSource {
+class ClickPreviewer : public juce::AudioSource, private ClickGenerator {
 
 public:
     ClickPreviewer(juce::AudioProcessorValueTreeState& valueTreeState) : apvts(valueTreeState)
@@ -40,22 +41,23 @@ public:
         auto* buffer = bufferToFill.buffer;
         auto numSamples = bufferToFill.numSamples;
 
-        // Clear output buffer.
+        //clear output buffer
         for (int channel = 0; channel < buffer->getNumChannels(); ++channel)
             buffer->clear(channel, bufferToFill.startSample, numSamples);
 
-        // Process sample by sample.
+        //process sample by sample
         for (int sample = 0; sample < numSamples; sample++) {
-            // Global scheduling of new subclicks.
+            //global scheduling of new subclicks
             if (previewActive) {
                 if (samplesUntilNextSubClick <= 0 && currentPipIndex < pips.size()) {
                     const Pip& pip = pips[currentPipIndex];
                     spawnSubClick(pip);
-                    int delay = pip.length - pip.tail;  // Ensure pip.length & pip.tail are in samples.
+                    int delay = pip.length - pip.tail;
                     samplesUntilNextSubClick = (delay > 0) ? delay : 1;
                     currentPipIndex++;
 
-                    // End preview scheduling when all pips have been spawned.
+                    //end preview scheduling when all pips have been spawned
+                    //this doesn't turn off audio. only stops new subclicks from being spawned
                     if (currentPipIndex >= static_cast<int>(pips.size())) {
                         previewActive = false;
                     }
@@ -64,8 +66,7 @@ public:
                     samplesUntilNextSubClick--;
                 }
             }
-
-            // Render active subclicks.
+            //render active subclicks
             float output = renderActiveSubClicks();
             for (int channel = 0; channel < buffer->getNumChannels(); channel++) {
                 buffer->addSample(channel, bufferToFill.startSample + sample, output);
@@ -74,35 +75,37 @@ public:
     }
 
 
+
+    //============================================================
+
+
+
     float renderActiveSubClicks() {
         double output = 0.0;
 
         for (size_t i = 0; i < activeSubClicks.size(); ++i) {
-            auto& click = activeSubClicks[i];
-            //render the click audio only.
-            float oscVal = std::sin(click.phase * 2.0 * juce::MathConstants<double>::pi);
-            click.phase += click.frequency / currentSampleRate;
-            if (click.phase >= 1.0)
-                click.phase -= 1.0;
-
-            if (click.curLevel >= click.maxLevel) {
-                click.levelChangePerSample = -(click.curLevel / static_cast<double>(click.samplesRemaining));
-            }
-            click.curLevel += click.levelChangePerSample;
-            output += oscVal * click.curLevel;
-            click.samplesRemaining--;
+            //get the current subclick
+			SubClick& click = activeSubClicks[i];
+			output += renderSubclickSample(click);
         }
-        int activeClickNum = activeSubClicks.size();
-        if (activeClickNum == 0) return 0;
-        // Remove finished subclicks.
-        activeSubClicks.erase(
-            std::remove_if(activeSubClicks.begin(), activeSubClicks.end(),
-                [](auto& c) { return c.samplesRemaining <= 0; }),
-            activeSubClicks.end()
-        );
 
-        return static_cast<float>(output);
+        //try to remove finished clicks without crashing the whole program
+        int activeClickNum = activeSubClicks.size();
+        if (activeClickNum == 0) {
+            return 0;
+        }
+        else {
+            // Remove finished subclicks. 
+            activeSubClicks.erase(
+                std::remove_if(activeSubClicks.begin(), activeSubClicks.end(),
+                    [](auto& c) { return c.samplesRemaining <= 0; }),
+                activeSubClicks.end()
+            );
+
+            return static_cast<float>(output);
+        }
     }
+
 
 
     void setPips(std::vector<Pip> newPips) {
@@ -116,22 +119,9 @@ public:
             return;
         }
 
-        //get the correct size of the buffer so we can tell rendernextblock how many we need
-        //tail is the amount of overlap with the next note, so disregard tail of last note
-
-        //if (pips.size() == 1) lengthMicoseconds = pips[0].length;   //just one pip
-        //else {
-        //    //all but the last: full lengths
-        //    for (int i = 0; i < pips.size() - 1; ++i)
-        //        lengthMicoseconds += pips[i].length;
-        //    // Last pip: subtract the previous pip’s tail
-        //    int last = (int)pips.size() - 1;
-        //    lengthMicoseconds += pips[last].length
-        //        - pips[last - 1].tail;
-        //}
-
+        //get the correct size of the buffer so we can set the buffer correctly
         int nextStart = 0.f;
-        int lenMS = 0.f;
+        int lenSamples = 0;
         for (int i = 0; i < pips.size(); i++) {
             const Pip& pip = pips[i];
             int overlap = pip.tail;
@@ -145,13 +135,12 @@ public:
             int end = nextStart + length;
 
             //update the two time markers
-            if (end > lenMS) lenMS = end;
+            if (end > lenSamples) lenSamples = end;
             int advance = length - overlap;
             if (advance < 0) advance = 0;
             nextStart += advance;
         }
-        double lengthSeconds = static_cast<double>(lenMS) / 1e6; // 1 second is 1 million microseconds
-		int totalSamples = static_cast<int>(lengthSeconds * currentSampleRate);
+        int totalSamples = lenSamples;
 
         //allocate buffa
         outBuffer.setSize(1, totalSamples);
@@ -188,17 +177,6 @@ public:
 
 
 private:
-    //identical to struct in synthVoice.h
-    struct SubClick
-    {
-        int samplesRemaining;     
-        double frequency;              
-        double phase;                  
-        double maxLevel;               
-        double curLevel;               
-        double levelChangePerSample;   
-    };
-
 
     void spawnSubClick(const Pip& pip) {
         SubClick newSubClick;
@@ -220,12 +198,10 @@ private:
         activeSubClicks.push_back(newSubClick);
     }
 
-
     int samplesUntilNextSubClick = 0;
     bool previewActive = false;
     int currentPipIndex = 0;
     std::vector<Pip> pips;
-    std::vector<SubClick> activeSubClicks;
     double currentSampleRate = 44100.0;
 
     juce::Random rng;
